@@ -1,10 +1,36 @@
 import { RecordItem } from './RecordItem'
 import { MOCK_RECORDS } from '../mock/MockData'
 import { RecordItemData } from '../model/RecordItemData'
-@Entry
+import { RdbManager } from '../dao/RdbManager';
+
 @Component
 export struct SearchView {
   @State searchKeyword: string = ''; // 绑定的搜索关键词
+  // 存放从数据库查出的真实结果
+  @State searchResults: RecordItemData[] = [];
+
+  // 防抖定时器 ID（前端工程化高级技巧）
+  private searchTimeoutId: number = -1;
+
+  // 向数据库发起模糊查询
+  async performSearch(keyword: string) {
+    // 1. 如果搜索词为空，直接清空结果并返回
+    if (!keyword.trim()) {
+      this.searchResults = [];
+      return;
+    }
+
+    try {
+      // 2. 调用 RdbManager 查库
+      // 第一个参数传 undefined 表示不限分类，第二个参数传关键词
+      const results = await RdbManager.getInstance().queryRecords(undefined, keyword.trim());
+
+      // 3. 将真实数据塞给状态变量，UI 自动刷新
+      this.searchResults = results;
+    } catch (error) {
+      console.error('搜索查询失败', error);
+    }
+  }
 
   // 动态计算过滤后的列表
   private getFilteredRecords(): RecordItemData[] {
@@ -20,7 +46,7 @@ export struct SearchView {
 
   build() {
     Column() {
-      // 1. 顶部搜索框
+      // 顶部搜索框
       Search({
         value: this.searchKeyword,
         placeholder: '搜索账单、日程或知识内容...'
@@ -32,9 +58,20 @@ export struct SearchView {
         .onChange((value: string) => {
           // 用户输入时，实时更新状态变量
           this.searchKeyword = value;
+
+          // 避免用户每打一个字母就疯狂查一次数据库，延迟 300 毫秒后再查
+          clearTimeout(this.searchTimeoutId);
+          this.searchTimeoutId = setTimeout(() => {
+            this.performSearch(value);
+          }, 300);
+        })
+        .onSubmit((value: string) => {
+          // 用户点击软键盘上的“搜索/回车”键时，立刻查询
+          clearTimeout(this.searchTimeoutId);
+          this.performSearch(value);
         })
 
-      // 2. 搜索结果展示区
+      // 搜索结果展示区
       Column() {
         if (this.searchKeyword.trim() === '') {
           // 空白状态：提示用户输入
@@ -61,6 +98,15 @@ export struct SearchView {
                 RecordItem({ item: item })
               }
               .padding({ left: 16, right: 16 })
+              .onClick(() => {
+                // 点击搜索出来的卡片，同样跳转到详情页
+                this.getUIContext().getRouter().pushUrl({
+                  url: 'pages/RecordDetail',
+                  params: {
+                    recordInfo: item
+                  }
+                });
+              })
             }, (item: RecordItemData) => item.id)
           }
           .width('100%')

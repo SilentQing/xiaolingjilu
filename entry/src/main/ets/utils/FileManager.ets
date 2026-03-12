@@ -6,6 +6,34 @@ import { common } from '@kit.AbilityKit';
 const TAG = 'FileManager';
 
 export class FileManager {
+  /**
+   * 将系统图库的图片 URI 拷贝到应用本地沙箱
+   * @param context UIAbility 的上下文，用于获取沙箱路径
+   * @param sourceUri PhotoViewPicker 返回的图片 URI
+   * @returns 返回拷贝后的沙箱绝对路径
+   */
+  static async copyImageToSandbox(context: Context, sourceUri: string): Promise<string> {
+    try {
+      // 生成沙箱内的唯一文件名 (利用时间戳避免重名)
+      const fileName = `screenshot_${Date.now()}.jpg`;
+      // 拼接目标沙箱路径 (context.filesDir 是应用内部的专属存储区)
+      const destPath = `${context.filesDir}/${fileName}`;
+      // 以只读模式打开系统图库中的源文件
+      const srcFile = await fs.open(sourceUri, fs.OpenMode.READ_ONLY);
+      // 将源文件直接拷贝到沙箱路径 (使用文件描述符 fd 拷贝最稳定)
+      await fs.copyFile(srcFile.fd, destPath);
+      // 务必关闭源文件，释放系统级内存句柄
+      await fs.close(srcFile);
+
+      hilog.info(0x0000, 'FileManager', `沙箱拷贝成功: ${destPath}`);
+      return destPath;
+
+    } catch (err) {
+      hilog.error(0x0000, 'FileManager', `沙箱拷贝失败: ${JSON.stringify(err)}`);
+      throw new Error("copy Image To Sandbox filed");
+    }
+  }
+
   private static instance: FileManager;
 
   static getInstance(): FileManager {

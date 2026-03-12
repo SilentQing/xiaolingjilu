@@ -5,6 +5,7 @@
     "pages/ScheduleAnalyze",
     "pages/KnowledgeAnalyze",
     "pages/BillAnalyze",
-    "pages/Bill"
+    "pages/Bill",
+    "pages/RecordDetail"
   ]
 }

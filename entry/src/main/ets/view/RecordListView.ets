@@ -2,6 +2,8 @@ import { RecordItem } from './RecordItem'
 import { MOCK_RECORDS } from '../mock/MockData'
 import { Category, RecordItemData } from '../model/RecordItemData'
 import { RdbManager } from '../dao/RdbManager';
+import { router } from '@kit.ArkUI';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 interface top_label {
   label: string;
@@ -10,10 +12,10 @@ interface top_label {
 
 @Component
 export struct RecordListView {
-  // 1. 定义状态变量：存放从数据库查出来的真实数据
+  // 定义状态变量：存放从数据库查出来的真实数据
   @State records: RecordItemData[] = []
 
-  // 2. 当前选中的分类，默认查全部
+  // 当前选中的分类，默认查全部
   @State currentCategory: string = 'All'
 
   // 定义分类配置项，方便渲染顶部切换栏
@@ -24,22 +26,21 @@ export struct RecordListView {
     { label: '知识', value: Category.Knowledge }
   ]
 
-  // 3. 鸿蒙组件生命周期：组件即将出现时调用
+  // 组件即将出现时调用
   aboutToAppear() {
     this.loadData()
   }
 
-  // 4. 核心方法：向数据库要数据
+  // 向数据库要数据
   async loadData() {
     // 如果选了'All'，就传 undefined 去查全部；否则传对应的分类枚举
     const queryCategory = this.currentCategory === 'All' ? undefined : this.currentCategory
-
     // 调用我们刚在 RdbManager 写好的查询方法
     const result = await RdbManager.getInstance().queryRecords(queryCategory)
-
     // 把查到的数据塞给状态变量，UI 瞬间自动刷新！
     this.records = result
   }
+
   build() {
     Column() {
       // 顶部：分类切换栏 (Segment 风格)
@@ -80,6 +81,21 @@ export struct RecordListView {
               RecordItem({ item: item })
             }
             .padding({ left: 16, right: 16 })
+            .onClick(() => {
+              // 点击卡片，跳转到详情页，并把当前卡片的数据当做参数传过去
+              this.getUIContext().getRouter().pushUrl({
+                url: 'pages/RecordDetail',
+                params: {
+                  recordInfo: item // 对应详情页 params.recordInfo
+                }
+              }, router.RouterMode.Standard, (err) => {
+                if(err) {
+                  hilog.error(0x0000, 'RecordListView',`Invoke pushUrl failed, code is ${err.code}, message is ${err.message}`);
+                  return;
+                }
+                hilog.info(0x0000, 'RecordListView','Invoke pushUrl succeeded.');
+              });
+            });
           }, (item: RecordItemData) => item.id) // 用真实 ID 做为 Key 提升渲染性能
         }
         .width('100%')
