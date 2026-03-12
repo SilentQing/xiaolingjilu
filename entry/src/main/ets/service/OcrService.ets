@@ -15,37 +15,28 @@ export class OcrService {
     let pixelMap: image.PixelMap | null = null;
 
     try {
-      // 1. 以只读模式打开沙箱里的截图文件
-      file = fs.openSync(sandboxPath, fs.OpenMode.READ_ONLY);
-
-      // 2. 创建图片源 (ImageSource)
-      imageSource = image.createImageSource(file.fd);
-
-      // 3. 解码为底层像素图 (PixelMap)，这是 Core Vision 唯一认的格式
-      pixelMap = await imageSource.createPixelMap();
-
-      // 4. 构建视觉信息请求对象
+      file = fs.openSync(sandboxPath, fs.OpenMode.READ_ONLY);    // 以只读模式打开沙箱里的截图文件
+      imageSource = image.createImageSource(file.fd);            // 创建图片源 (ImageSource)
+      pixelMap = await imageSource.createPixelMap();             // 解码为底层像素图 (PixelMap)，这是 Core Vision 唯一认的格式
+      // 构建视觉信息请求对象
       const visionInfo: textRecognition.VisionInfo = {
         pixelMap: pixelMap
       };
-
-      // 5. 设置 OCR 配置（开启方向检测，防止用户截图倒过来）
+      // 设置 OCR 配置（开启方向检测，防止用户截图倒过来）
       const config: textRecognition.TextRecognitionConfiguration = {
         isDirectionDetectionSupported: true
       };
-
-      // 6. 调用 NPU 进行端侧原生识别
+      // 调用 NPU 进行端侧原生识别
       hilog.info(0x0000, 'OcrService', '开始执行原生 OCR 识别...');
       const result = await textRecognition.recognizeText(visionInfo, config);
-
-      // 7. 返回识别出的完整字符串
+      // 返回识别出的完整字符串
       return result.value;
 
     } catch (err) {
       hilog.error(0x0000, 'OcrService', `OCR 解析失败: ${JSON.stringify(err)}`);
       throw new Error("OCR extract Text filed");
     } finally {
-      // 8. 【极其关键】手动释放 C++ 侧的内存句柄，防止应用内存泄漏崩溃
+      // 手动释放 C++ 侧的内存句柄，防止应用内存泄漏崩溃
       if (pixelMap) {
         await pixelMap.release();
       }
