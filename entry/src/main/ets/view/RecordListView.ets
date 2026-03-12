@@ -1,5 +1,4 @@
 import { RecordItem } from './RecordItem'
-import { MOCK_RECORDS } from '../mock/MockData'
 import { Category, RecordItemData } from '../model/RecordItemData'
 import { RdbManager } from '../dao/RdbManager';
 import { router } from '@kit.ArkUI';

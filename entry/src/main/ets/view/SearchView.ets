@@ -1,5 +1,4 @@
 import { RecordItem } from './RecordItem'
-import { MOCK_RECORDS } from '../mock/MockData'
 import { RecordItemData } from '../model/RecordItemData'
 import { RdbManager } from '../dao/RdbManager';
 
@@ -14,34 +13,22 @@ export struct SearchView {
 
   // 向数据库发起模糊查询
   async performSearch(keyword: string) {
-    // 1. 如果搜索词为空，直接清空结果并返回
+    // 如果搜索词为空，直接清空结果并返回
     if (!keyword.trim()) {
       this.searchResults = [];
       return;
     }
 
     try {
-      // 2. 调用 RdbManager 查库
+      // 调用 RdbManager 查库
       // 第一个参数传 undefined 表示不限分类，第二个参数传关键词
       const results = await RdbManager.getInstance().queryRecords(undefined, keyword.trim());
 
-      // 3. 将真实数据塞给状态变量，UI 自动刷新
+      // 将真实数据塞给状态变量，UI 自动刷新
       this.searchResults = results;
     } catch (error) {
       console.error('搜索查询失败', error);
     }
-  }
-
-  // 动态计算过滤后的列表
-  private getFilteredRecords(): RecordItemData[] {
-    if (!this.searchKeyword.trim()) {
-      return []; // 搜索框为空时，不展示内容（或者你可以改为展示历史搜索）
-    }
-    const lowerKeyword = this.searchKeyword.toLowerCase();
-    return MOCK_RECORDS.filter(item =>
-    item.title.toLowerCase().includes(lowerKeyword) ||
-    item.summary.toLowerCase().includes(lowerKeyword)
-    );
   }
 
   build() {
@@ -76,14 +63,14 @@ export struct SearchView {
         if (this.searchKeyword.trim() === '') {
           // 空白状态：提示用户输入
           Column() {
-            Image($r('app.media.search_placeholder')) // 搜索引导的占位图
+            Image($r('app.media.search_placeholder')) // 搜索引导的占位图，放大镜
               .width(120).height(120).margin({ bottom: 16, top: 80 })
             Text('输入关键词查找记录')
               .fontColor('#999999')
               .fontSize(14)
           }.width('100%').alignItems(HorizontalAlign.Center)
 
-        } else if (this.getFilteredRecords().length === 0) {
+        } else if (this.searchResults.length === 0) {
           // 无结果状态
           Text(`找不到与 "${this.searchKeyword}" 相关的记录`)
             .fontColor('#999999')
@@ -93,7 +80,7 @@ export struct SearchView {
         } else {
           // 渲染复用的列表卡片
           List({ space: 0 }) {
-            ForEach(this.getFilteredRecords(), (item: RecordItemData) => {
+            ForEach(this.searchResults, (item: RecordItemData) => {
               ListItem() {
                 RecordItem({ item: item })
               }
