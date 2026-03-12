@@ -7,8 +7,6 @@ const TAG = 'FileManager';
 
 export class FileManager {
   private static instance: FileManager;
-  private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-
 
   static getInstance(): FileManager {
     if (!FileManager.instance) {
