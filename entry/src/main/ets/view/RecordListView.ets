@@ -1,30 +1,91 @@
 import { RecordItem } from './RecordItem'
 import { MOCK_RECORDS } from '../mock/MockData'
-import { RecordItemData } from '../model/RecordItemData'
+import { Category, RecordItemData } from '../model/RecordItemData'
+import { RdbManager } from '../dao/RdbManager';
+
+interface top_label {
+  label: string;
+  value: string;
+}
 
 @Component
 export struct RecordListView {
+  // 1. 定义状态变量：存放从数据库查出来的真实数据
+  @State records: RecordItemData[] = []
+
+  // 2. 当前选中的分类，默认查全部
+  @State currentCategory: string = 'All'
+
+  // 定义分类配置项，方便渲染顶部切换栏
+  private categories: Array<top_label> = [
+    { label: '全部', value: 'All' },
+    { label: '账单', value: Category.Bill },
+    { label: '日程', value: Category.Schedule },
+    { label: '知识', value: Category.Knowledge }
+  ]
+
+  // 3. 鸿蒙组件生命周期：组件即将出现时调用
+  aboutToAppear() {
+    this.loadData()
+  }
+
+  // 4. 核心方法：向数据库要数据
+  async loadData() {
+    // 如果选了'All'，就传 undefined 去查全部；否则传对应的分类枚举
+    const queryCategory = this.currentCategory === 'All' ? undefined : this.currentCategory
+
+    // 调用我们刚在 RdbManager 写好的查询方法
+    const result = await RdbManager.getInstance().queryRecords(queryCategory)
+
+    // 把查到的数据塞给状态变量，UI 瞬间自动刷新！
+    this.records = result
+  }
   build() {
     Column() {
-      // 简单的标题栏
-      Text('记录列表')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .margin({ top: 20, bottom: 20, left: 16 })
-        .width('100%')
-
-      // 使用 List 组件渲染模拟数据
-      List({ space: 0 }) {
-        ForEach(MOCK_RECORDS, (item: RecordItemData) => {
-          ListItem() {
-            RecordItem({ item: item })
-          }
-          .padding({ left: 16, right: 16 })
-        }, (item: RecordItemData) => item.id)
+      // 顶部：分类切换栏 (Segment 风格)
+      Row() {
+        ForEach(this.categories, (cat: top_label) => {
+          Text(cat.label)
+            .fontSize(14)
+            .fontWeight(this.currentCategory === cat.value ? FontWeight.Bold : FontWeight.Normal)
+            .fontColor(this.currentCategory === cat.value ? '#FFFFFF' : '#666666')
+            .backgroundColor(this.currentCategory === cat.value ? '#007DFF' : '#E5E5E5')
+            .padding({ left: 16, right: 16, top: 6, bottom: 6 })
+            .borderRadius(16)
+            .margin({ right: 8 })
+            .onClick(() => {
+              // 点击不同分类时：更新状态 -> 重新查库
+              this.currentCategory = cat.value
+              this.loadData()
+            })
+        }, (cat: top_label) => cat.value)
       }
       .width('100%')
-      .layoutWeight(1) // 占满剩余高度
-      .edgeEffect(EdgeEffect.Spring) // 列表回弹效果
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+
+      // 下方：列表展示区
+      if (this.records.length === 0) {
+        // 数据库没查到数据时的空状态
+        Column() {
+          Text('暂无记录，快去上传截图吧')
+            .fontColor('#999999')
+            .fontSize(14)
+            .margin({ top: 100 })
+        }.layoutWeight(1).width('100%').alignItems(HorizontalAlign.Center)
+      } else {
+        // 渲染真实数据的列表
+        List({ space: 0 }) {
+          ForEach(this.records, (item: RecordItemData) => {
+            ListItem() {
+              RecordItem({ item: item })
+            }
+            .padding({ left: 16, right: 16 })
+          }, (item: RecordItemData) => item.id) // 用真实 ID 做为 Key 提升渲染性能
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .edgeEffect(EdgeEffect.Spring)
+      }
     }
     .width('100%')
     .height('100%')

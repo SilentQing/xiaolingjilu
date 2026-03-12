@@ -10,6 +10,7 @@ export interface RecordItemData {
   title: string;          // 简短标题
   summary: string;        // OCR 摘要
   category: Category;     // 分类
+  tags: string;
   highlightValue?: string; // 金额或时间数值
   createTime: string;     // 创建日期
 }

@@ -1,18 +1,22 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { DataManager } from '../utils/DataManager';
+import { RdbManager } from '../dao/RdbManager';
+
+// import { DataManager } from '../utils/DataManager';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility'
 
 export default class EntryAbility extends UIAbility {
-  private static dataManager: DataManager | null = null;
+  // private static dataManager: DataManager | null = null;
 
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+  async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
     hilog.info(DOMAIN, 'EntryAbility', '应用初始化开始');
+    // 应用启动时，初始化本地 SQLite 数据库
     let applicationContext = this.context.getApplicationContext();
+    await RdbManager.getInstance().initRdb(this.context)
     applicationContext.setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET)
     // 获取ResourceManager（资源管理）
     let resourceManager = applicationContext.resourceManager;

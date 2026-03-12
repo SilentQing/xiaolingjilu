@@ -282,9 +282,6 @@ struct Index {
         //   })
         // }.tabBar(this.tabBottomBuilder('首页',0))
 
-        // TabContent() {
-        //   // Bill()
-        // }.tabBar(this.tabBottomBuilder('账单',1))
 
       }
       .height("90%")
@@ -295,18 +292,6 @@ struct Index {
         this.selectBottomIndex = index;
       })
 
-      // // 底部FAB按钮
-      // Button('+')
-      //   .width(60)
-      //   .height(60)
-      //   .backgroundColor('#007DFF')
-      //   .fontColor(Color.White)
-      //   .fontSize(24)
-      //   .borderRadius(30)
-      //   .position({ x: '85%', y: '85%' })
-      //   .onClick(() => {
-      //     // this.callFilePickerSelectImage();
-      //   })
     }
     .width('100%')
     .height('100%')
