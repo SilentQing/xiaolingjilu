@@ -29,6 +29,7 @@ export class OcrService {
       // 调用 NPU 进行端侧原生识别
       hilog.info(0x0000, 'OcrService', '开始执行原生 OCR 识别...');
       const result = await textRecognition.recognizeText(visionInfo, config);
+      hilog.info(0x000, 'OcrService', `识别出的文字${JSON.stringify(result)}`)
       // 返回识别出的完整字符串
       return result.value;
 

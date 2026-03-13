@@ -25,6 +25,14 @@ export struct RecordListView {
     { label: '知识', value: Category.Knowledge }
   ]
 
+  // 接收父组件传来的刷新信号，并使用 @Watch 监听它的变化
+  @Prop @Watch('onTriggerRefresh') refreshTrigger: number;
+
+  // 当信号发生变化时，自动执行此回调
+  onTriggerRefresh() {
+    this.loadData(); // 重新向 SQLite 要最新的数据！
+  }
+
   // 组件即将出现时调用
   aboutToAppear() {
     this.loadData()
@@ -92,6 +100,7 @@ export struct RecordListView {
                   hilog.error(0x0000, 'RecordListView',`Invoke pushUrl failed, code is ${err.code}, message is ${err.message}`);
                   return;
                 }
+                hilog.info(0x000, 'Record', `get path: ${JSON.stringify(item)}}`)
                 hilog.info(0x0000, 'RecordListView','Invoke pushUrl succeeded.');
               });
             });

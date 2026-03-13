@@ -1,8 +1,10 @@
 import { RecordItemData, Category } from '../model/RecordItemData'
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 @Component
 export struct RecordItem {
   @Prop item: RecordItemData; // 接收外部传入的数据
+
 
   // 根据分类获取颜色
   private getCategoryColor(): string {
@@ -15,7 +17,7 @@ export struct RecordItem {
 
   build() {
     Row() {
-      // 1. 左侧：图片缩略图
+      // 左侧：图片缩略图
       Image(this.item.imagePath)
         .width(80)
         .height(80)
@@ -23,8 +25,13 @@ export struct RecordItem {
         .margin({ right: 12 })
         .objectFit(ImageFit.Cover)
         .backgroundColor('#F2F2F2')
+        .sharedTransition(`shared_img_${this.item.id}`, {
+          duration: 350,                 // 动画时长：350毫秒是人眼感觉最舒适的速率
+          curve: Curve.FastOutSlowIn,    // 动画曲线：快出慢入，模拟真实的物理减速感
+          delay: 0
+        })
 
-      // 2. 中间：文本内容区
+      // 中间：文本内容区
       Column() {
         Row() {
           // 分类小标签

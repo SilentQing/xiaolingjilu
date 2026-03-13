@@ -36,7 +36,7 @@ export class RdbManager {
   }
 
   /**
-   * 初始化数据库（建议在 EntryAbility 的 onCreate 中调用）
+   * 初始化数据库在 EntryAbility 的 onCreate 中调用
    * @param context 应用上下文
    */
   public async initRdb(context: Context): Promise<void> {
@@ -143,6 +143,24 @@ export class RdbManager {
     resultSet.close();
 
     return results;
+  }
+
+
+  /**
+   * 根据 ID 删除单条记录
+   * @param id 记录的唯一标识
+   * @returns 受影响的行数 (1 表示成功)
+   */
+  public async deleteRecord(id: string): Promise<number> {
+    const store = this.getStore();
+
+    // 构造删除条件：WHERE id = ?
+    let predicates = new relationalStore.RdbPredicates('record_item');
+    predicates.equalTo('id', id);
+
+    // 执行删除操作
+    const deletedRows = await store.delete(predicates);
+    return deletedRows;
   }
 
 }

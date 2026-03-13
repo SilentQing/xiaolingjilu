@@ -1,4 +1,4 @@
-import fs from '@ohos.file.fs';
+import { fileIo as fs } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
@@ -17,11 +17,13 @@ export class FileManager {
       // 生成沙箱内的唯一文件名 (利用时间戳避免重名)
       const fileName = `screenshot_${Date.now()}.jpg`;
       // 拼接目标沙箱路径 (context.filesDir 是应用内部的专属存储区)
+      hilog.info(0x000, 'imagePath', `沙箱目录${context.filesDir}`)
       const destPath = `${context.filesDir}/${fileName}`;
+      hilog.info(0x000, 'imagePath', `destPath:${destPath}`)
       // 以只读模式打开系统图库中的源文件
       const srcFile = await fs.open(sourceUri, fs.OpenMode.READ_ONLY);
       // 将源文件直接拷贝到沙箱路径 (使用文件描述符 fd 拷贝最稳定)
-      await fs.copyFile(srcFile.fd, destPath);
+      await fs.copyFile(srcFile.fd, destPath, 0);
       // 务必关闭源文件，释放系统级内存句柄
       await fs.close(srcFile);
 
@@ -34,7 +36,47 @@ export class FileManager {
     }
   }
 
+  /**
+   * 删除沙箱内的指定文件
+   * @param filePath 文件的绝对路径
+   */
+  static async deleteSandboxFile(filePath: string): Promise<void> {
+    try {
+      // 在删除前，先检查文件是否存在，避免抛出异常
+      const isExist = fs.accessSync(filePath);
+      if (isExist) {
+        // unlink 是底层文件系统删除实体的标准 API
+        await fs.unlink(filePath);
+        hilog.info(0x0000, 'FileManager', `沙箱文件销毁成功: ${filePath}`);
+      }
+    } catch (err) {
+      hilog.error(0x0000, 'FileManager', `沙箱文件销毁失败: ${JSON.stringify(err)}`);
+      // 这里不抛出异常，即使图片找不到，也不应该阻止用户删除数据库里的错误记录
+    }
+  }
+
+
+
+
+
+
   private static instance: FileManager;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   static getInstance(): FileManager {
     if (!FileManager.instance) {

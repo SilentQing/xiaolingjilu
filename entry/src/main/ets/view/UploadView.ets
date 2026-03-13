@@ -15,7 +15,7 @@ export struct UploadView {
   @State selectedImageUri: string = ''; // 存放选中的图片 URI
   @State isProcessing: boolean = false; // 内部状态：是否正在识别
 
-  // --- 用于底部弹窗的状态变量 ---
+  // 用于底部弹窗的状态变量
   @State isShowConfirmSheet: boolean = false; // 控制面板显示/隐藏
   @State pendingRecord: RecordItemData | null = null; // 暂存识别出的原始记录
 
@@ -29,7 +29,7 @@ export struct UploadView {
   uiContext: UIContext = this.getUIContext();
   promptAction: PromptAction = this.uiContext.getPromptAction();
 
-  // --- 新增：自定义底部面板的 UI 构建器 ---
+  // 自定义底部面板的 UI 构建器
   @Builder
   ConfirmSheetBuilder() {
     Column() {
@@ -45,7 +45,7 @@ export struct UploadView {
 
       // 表单区
       Column({ space: 16 }) {
-        // 1. 分类选择 (用胶囊按钮组模拟)
+        // 分类选择 (用胶囊按钮组模拟)
         Row({ space: 12 }) {
           Text('分类').fontSize(16).fontWeight(FontWeight.Medium).width(50)
           this.CategoryButton('账单', Category.Bill)
@@ -53,7 +53,7 @@ export struct UploadView {
           this.CategoryButton('知识', Category.Knowledge)
         }.width('100%')
 
-        // 2. 标题输入框
+        // 标题输入框
         Row() {
           Text('标题').fontSize(16).fontWeight(FontWeight.Medium).width(50)
           TextInput({ text: this.editTitle, placeholder: '请输入简短标题' })
@@ -61,7 +61,7 @@ export struct UploadView {
             .onChange((value: string) => { this.editTitle = value })
         }.width('100%')
 
-        // 3. 摘要输入框 (多行文本)
+        // 摘要输入框 (多行文本)
         Column() {
           Text('摘要内容').fontSize(16).fontWeight(FontWeight.Medium).width('100%').margin({ bottom: 8 })
           TextArea({ text: this.editSummary })
@@ -192,6 +192,7 @@ export struct UploadView {
     }
   }
 
+
   // OCR 处理逻辑
   async startOcr() {
     if (!this.selectedImageUri) return;
@@ -202,8 +203,10 @@ export struct UploadView {
       const rawText = await OcrService.extractText(sandboxPath);                                      // 调用原生 API 提取纯文本
       const newRecord = this.analyzeTextWithCustomRules(rawText, sandboxPath);                        // 基于自定义规则对文本进行分类和提取
 
+
       // 将 AI 提取的结果同步给编辑状态
       this.pendingRecord = newRecord;
+      hilog.info(0x000, 'newRecord', `${JSON.stringify(newRecord)}`)
       this.editTitle = newRecord.title;
       this.editSummary = newRecord.summary;
       this.editCategory = newRecord.category;
@@ -211,8 +214,6 @@ export struct UploadView {
       // 关闭加载动画，拉起底部确认面板
       this.isProcessing = false;
       this.isShowConfirmSheet = true;
-
-      // await RdbManager.getInstance().insertRecord(newRecord);                                         // 将结构化数据写入 SQLite 数据库
 
       this.selectedImageUri = '';
       // 这里可以加一个 Toast 提示 "提取成功"
@@ -226,15 +227,16 @@ export struct UploadView {
    * 使用自定义正则规则，将杂乱的 OCR 文本结构化为数据库对象
    */
   private analyzeTextWithCustomRules(text: string, path: string): RecordItemData {
+    hilog.info(0x000, 'imagePath', `get path: ${path}`)
     // 默认兜底分类为“知识”
     let category: Category = Category.Knowledge;
     let highlightValue = '';
 
-    // 规则 1：账单匹配规则（寻找金额）
+    // 账单匹配规则（寻找金额）
     const billRegex = /(?:支付|金额|合计|¥|￥)\s*(\d+(\.\d{1,2})?)/;
     const billMatch = text.match(billRegex);
 
-    // 规则 2：日程匹配规则（寻找日期时间）
+    // 日程匹配规则（寻找日期时间）
     const scheduleRegex = /(?:明天|后天|周[一二三四五六日]|\d{1,2}月\d{1,2}日)\s*\d{1,2}:\d{2}/;
     const scheduleMatch = text.match(scheduleRegex);
 
@@ -253,7 +255,7 @@ export struct UploadView {
 
     return {
       id: util.generateRandomUUID(), // 生成唯一 ID
-      imagePath: path,
+      imagePath: 'file://' + path,
       title: title,
       summary: summary,
       category: category,
@@ -265,18 +267,19 @@ export struct UploadView {
 
   }
 
-  // --- 新增：真正的保存入库方法 ---
+  // 保存入库方法
   async saveRecord() {
     if (!this.pendingRecord) return;
 
     // 把用户修改后的最新值覆盖回去
+
     this.pendingRecord.title = this.editTitle;
     this.pendingRecord.summary = this.editSummary;
     this.pendingRecord.category = this.editCategory;
 
     try {
       // 存入 SQLite
-      await RdbManager.getInstance().insertRecord(this.pendingRecord);
+      await RdbManager.getInstance().insertRecord(this.pendingRecord);                // 将结构化数据写入 SQLite 数据库
 
       // 关闭面板，清空当前页面状态
       this.isShowConfirmSheet = false;

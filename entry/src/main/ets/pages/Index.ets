@@ -42,13 +42,18 @@ struct Index {
   @State selectTopIndex: number = 0;
   @State selectBottomIndex: number = 0;
   @State index: number = 0
+  @State refreshTrigger: number = 0                             // 刷新信号灯
 
 
   async aboutToAppear(): Promise<void> {
     this.context = getContext(this) as common.UIAbilityContext;
-    // await this.initializeDataManager()
-    // await this.loadScreenshotsFromDatabase();
   }
+
+  // 页面每次展示到屏幕上时触发（包括从详情页 back 回来）
+  onPageShow() {
+    this.refreshTrigger++
+  }
+
 
   // 自定义 Tab 标签样式
   @Builder TabBuilder(title: string, index: number, selectedImg: Resource, normalImg: Resource) {
@@ -63,62 +68,6 @@ struct Index {
         .fontWeight(500)
     }.width('100%')
   }
-
-  // private async initializeDataManager(): Promise<void> {
-  //   try {
-  //
-  //     if (1) {
-  //       hilog.error(0xFF00, TAG, `DataManager 获取失败(不存在)`);
-  //       throw new Error('DataManager 获取失败');
-  //     }
-  //   } catch (error) {
-  //     const bizError = error as BusinessError;
-  //     hilog.error(0xFF00, TAG, `失败详情：
-  //     Code: ${bizError.code},
-  //     Message: ${bizError.message},
-  //     Stack: ${bizError.stack || '无堆栈信息'}`);
-  //     promptAction.showToast({ message: '数据服务不可用' });
-  //     throw new Error(`DataManager 初始化失败: ${bizError.code}`);
-  //   }
-  //
-  // }
-
-  // // 从数据库加载截图列表
-  // async loadScreenshotsFromDatabase(): Promise<void> {
-  //   if (!this.context) {
-  //     hilog.error(0xFF00, TAG, 'Context 未初始化');
-  //     return;
-  //   }
-  //   try {
-  //     this.isLoading = true;
-  //
-  //     // 初始化数据库（如果未初始化）
-  //     const dataManager = await DataManager.create(this.context);
-  //
-  //     // 获取所有截图
-  //     const screenshots = await dataManager.getAllScreenshots();
-  //
-  //     // 转换为前端需要的格式
-  //     this.ScreenshotItems = screenshots.map(item => ({
-  //       id: item.id,
-  //       uri: item.uri,
-  //       thumbnail: item.thumbnail,
-  //       importTime: Number(item.importTime) || Date.now(),
-  //       status: item.status,
-  //       fileName: item.fileName,
-  //       category: item.category ?? '未分类' ,// 处理可选字段
-  //       createdTime: item.createdTime, // 补充缺失字段
-  //     } as ScreenshotEntity));
-  //
-  //     hilog.info(0xFF00, TAG, `从数据库加载了 ${this.ScreenshotItems.length} 个截图`);
-  //   } catch (error) {
-  //     hilog.error(0xFF00, TAG, '加载截图列表失败: ' + JSON.stringify(error));
-  //     promptAction.showToast({ message: '加载失败' });
-  //     // 如果数据库为空，可以显示空状态或保持空数组
-  //   } finally {
-  //     this.isLoading = false;
-  //   }
-  // }
 
   // // 使用picker选择图片
   // async callFilePickerSelectImage(): Promise<void> {
@@ -200,25 +149,20 @@ struct Index {
   //   }
   // }
 
-  // // 工具方法
-  // private formatDate(date: Date): string {
-  //   return `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+  // @Builder tabTopBuilder(title: string, targetIndex: number) {
+  //   Column() {
+  //     Text(title)
+  //       .fontColor(this.selectTopIndex === targetIndex ? '#1698CE' : '#6B6B6B')
+  //   }
+  //   .height(30)
   // }
 
-  @Builder tabTopBuilder(title: string, targetIndex: number) {
-    Column() {
-      Text(title)
-        .fontColor(this.selectTopIndex === targetIndex ? '#1698CE' : '#6B6B6B')
-    }
-    .height(30)
-  }
-
-  @Builder tabBottomBuilder(title: string, targetIndex: number) {
-    Column() {
-      Text(title)
-        .fontColor(this.selectBottomIndex === targetIndex ? '#1698CE' : '#6B6B6B')
-    }
-  }
+  // @Builder tabBottomBuilder(title: string, targetIndex: number) {
+  //   Column() {
+  //     Text(title)
+  //       .fontColor(this.selectBottomIndex === targetIndex ? '#1698CE' : '#6B6B6B')
+  //   }
+  // }
 
   build() {
     Column() {
@@ -231,58 +175,17 @@ struct Index {
         TabContent() {
           UploadView()
         }
-        .tabBar('识别')
+        .tabBar(('识别'))
 
         TabContent() {
-          RecordListView()
+          RecordListView({ refreshTrigger: this.refreshTrigger })
         }
         .tabBar('记录')
 
         TabContent() {
-          SearchView()
+          SearchView({ refreshTrigger: this.refreshTrigger })
         }
         .tabBar('搜索')
-
-        // TabContent(){
-        //   Tabs() {
-        //     // TabContent() {
-        //     //   // 未分析截图列表
-        //     //   List({ space: 10 }) {
-        //     //     ForEach(this.ScreenshotItems, (item: ScreenshotItem) => {
-        //     //       ListItem() {
-        //     //         ShowScreenshotItem({ item: item })
-        //     //           .onClick(() => {
-        //     //             // 点击跳转到识别页，传递模拟数据
-        //     //             console.info('ScreenshotItem Object:', JSON.stringify(item));
-        //     //             router.pushUrl({
-        //     //               url: 'pages/CategorySelect',
-        //     //               params: { screenshotData: JSON.stringify(item) }
-        //     //             });
-        //     //           })
-        //     //       }
-        //     //     }, (item: ScreenshotItem) => item.id.toString())
-        //     //   }
-        //     //   .height('100%')
-        //     //   .layoutWeight(1)
-        //     //   .width('100%')
-        //     // }.tabBar(this.tabTopBuilder('全部', 0))
-        //
-        //     // TabContent() {
-        //     //   Text("未分类")
-        //     //     .width('100%')
-        //     //     .height('100%')
-        //     //     .backgroundColor('rgb(112,112,112)')
-        //     //     .fontSize(40)
-        //     //     .fontColor(Color.Black)
-        //     //     .textAlign(TextAlign.Center)
-        //     // }.tabBar(this.tabTopBuilder('未分类', 1))
-        //   }
-        //   .onChange((index: number) => {
-        //     this.selectTopIndex = index;
-        //   })
-        // }.tabBar(this.tabBottomBuilder('首页',0))
-
-
       }
       .height("90%")
       .vertical(false)

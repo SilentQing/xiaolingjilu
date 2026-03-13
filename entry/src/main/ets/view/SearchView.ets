@@ -11,6 +11,14 @@ export struct SearchView {
   // 防抖定时器 ID（前端工程化高级技巧）
   private searchTimeoutId: number = -1;
 
+  // 接收父组件传来的刷新信号，并使用 @Watch 监听它的变化
+  @Prop @Watch('onTriggerRefresh') refreshTrigger: number;
+
+  // 当信号发生变化时，自动执行此回调
+  onTriggerRefresh() {
+    this.performSearch(this.searchKeyword); // 重新向 SQLite 要最新的数据！
+  }
+
   // 向数据库发起模糊查询
   async performSearch(keyword: string) {
     // 如果搜索词为空，直接清空结果并返回

@@ -1,5 +1,8 @@
 import router from '@ohos.router';
 import { RecordItemData, Category } from '../model/RecordItemData';
+import { PromptAction } from '@kit.ArkUI';
+import { RdbManager } from '../dao/RdbManager';
+import { FileManager } from '../utils/FileManager';
 
 @Entry
 @Component
@@ -10,12 +13,16 @@ struct RecordDetail {
   // 控制全屏图片预览的状态
   @State isPreviewOpen: boolean = false;
 
+  uiContext: UIContext | undefined = undefined;
+  promptAction: PromptAction = this.getUIContext().getPromptAction();
+
   // 页面生命周期：获取路由参数
   aboutToAppear() {
     const params = router.getParams() as Record<string, Object>;
     if (params && params.recordInfo) {
       this.record = params.recordInfo as RecordItemData;
     }
+    this.uiContext = this.getUIContext();
   }
 
   // 辅助方法：获取分类颜色
@@ -28,6 +35,42 @@ struct RecordDetail {
       default: return '#666666';
     }
   }
+
+  private async handleDelete() {
+    if (!this.record) return;
+
+
+    // 弹出系统级二次确认弹窗防误触
+    this.promptAction.showDialog({
+      title: '删除记录',
+      message: '确定要删除这条记录吗？删除后将无法恢复，且相关截图也会被清除。',
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '彻底删除', color: '#FF5E5E' } // 危险操作使用红色警示
+      ]
+    })
+      .then(async (data) => {
+      // data.index 为 1 表示用户点击了第二个按钮（彻底删除）
+      if (data.index === 1) {
+        try {
+          // 删库 + 删图
+          await RdbManager.getInstance().deleteRecord(this.record!.id);
+          await FileManager.deleteSandboxFile(this.record!.imagePath);
+
+          this.promptAction.showToast({ message: '删除成功' });
+
+          // 返回上一页（列表页或搜索页）
+          router.back();
+        } catch (error) {
+          this.promptAction.showToast({ message: '删除过程中发生异常' });
+        }
+      }
+    })
+      .catch((err: Error) => {
+        console.error('showDialog error: ' + err);
+      });
+  }
+
 
   build() {
     // 使用 Stack 布局，方便把全屏图片盖在最上面
@@ -45,6 +88,14 @@ struct RecordDetail {
             .fontWeight(FontWeight.Bold)
             .margin({ left: 16 })
             .layoutWeight(1)
+
+          // 右上角的删除按钮
+          Image($r('app.media.ic_delete')) // 垃圾桶图标
+            .width(24).height(24)
+            .fillColor('#FF5E5E') // 如果是 svg 图标，可以直接填色
+            .onClick(() => {
+              this.handleDelete();
+            })
         }
         .width('100%')
         .height(56)
@@ -52,20 +103,37 @@ struct RecordDetail {
         .backgroundColor(Color.White)
 
         if (this.record) {
-          // 2. 可滚动的内容区
+          // 可滚动的内容区
           Scroll() {
             Column({ space: 16 }) {
 
               // 顶部：大图裁剪预览（点击可全屏）
-              Image(this.record.imagePath)
-                .width('100%')
-                .height(200)
-                .objectFit(ImageFit.Cover) // 缩放裁剪填满
-                .borderRadius(12)
-                .onClick(() => {
-                  // 点击图片，打开全屏预览
-                  this.isPreviewOpen = true;
-                })
+              if(!this.isPreviewOpen) {
+                Image(this.record.imagePath)
+                  .width('100%')
+                  .height(200)
+                  .objectFit(ImageFit.Cover) // 缩放裁剪填满
+                  .borderRadius(12)
+                  // 跨页面转场（列表进来时的动画）
+                  .sharedTransition(`shared_img_${this.record.id}`, {
+                    duration: 350,
+                    curve: Curve.FastOutSlowIn,
+                    delay: 0
+                  })
+                  // 同页面几何转场 ID
+                  .geometryTransition(`zoom_img_${this.record.id}`)
+                  .onClick(() => {
+                    // 点击图片，打开全屏预览
+                    // --- 新增：使用 animateTo 触发显式动画 ---
+                    this.uiContext?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn } , () => {
+                      this.isPreviewOpen = true;
+                    })
+                  })
+              } else {
+                // 当图片全屏时，原地留一个透明的占位框，防止下方的文本突然往上顶
+                Row().width('100%').height(200)
+              }
+
 
               // 标题与高光数据区
               Row() {
@@ -145,18 +213,19 @@ struct RecordDetail {
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain) // 全屏模式下保持比例，不裁剪
+            // --- 新增：必须和起点的几何转场 ID 一致 ---
+            .geometryTransition(`zoom_img_${this.record.id}`)
+            .onClick(() => {
+              this.uiContext?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                this.isPreviewOpen = false;
+              })
+            })
         }
         .width('100%')
         .height('100%')
         .backgroundColor('#FF000000') // 纯黑色背景
         .zIndex(999) // 确保在最顶层
-        // 添加点击事件：点击任意位置退出全屏
-        .onClick(() => {
-          this.isPreviewOpen = false;
-        })
-        // 这里可以加上 transition 动画让弹出更平滑
-        .transition({ type: TransitionType.Insert, opacity: 0 })
-        .transition({ type: TransitionType.Delete, opacity: 0 })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300 }))
       }
     }
     .width('100%')
