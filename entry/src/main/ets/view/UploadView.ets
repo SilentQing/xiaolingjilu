@@ -7,6 +7,7 @@ import { RdbManager } from "../dao/RdbManager";
 import { Category, RecordItemData } from "../model/RecordItemData";
 import { util } from "@kit.ArkTS";
 import { PromptAction } from "@kit.ArkUI";
+import { DeepSeekService } from "../service/DeepSeekService";
 
 
 @Entry
@@ -200,9 +201,9 @@ export struct UploadView {
 
     try {
       const sandboxPath = await FileManager.copyImageToSandbox(this.context, this.selectedImageUri);  // 拷贝图片到沙箱
-      const rawText = await OcrService.extractText(sandboxPath);                                      // 调用原生 API 提取纯文本
-      const newRecord = this.analyzeTextWithCustomRules(rawText, sandboxPath);                        // 基于自定义规则对文本进行分类和提取
-
+      const rawText = await OcrService.extractText(sandboxPath);                                      // 调用侧端NPL原生 API 提取纯文本
+      // const newRecord = this.analyzeTextWithCustomRules(rawText, sandboxPath);                     // 基于自定义规则对文本进行分类和提取
+      const  newRecord = await DeepSeekService.analyzeText(rawText, sandboxPath)                      // 使用云端大模型对文本进行分类
 
       // 将 AI 提取的结果同步给编辑状态
       this.pendingRecord = newRecord;

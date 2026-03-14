@@ -31,6 +31,7 @@ export class OcrService {
       const result = await textRecognition.recognizeText(visionInfo, config);
       hilog.info(0x000, 'OcrService', `识别出的文字${JSON.stringify(result)}`)
       // 返回识别出的完整字符串
+      hilog.info(0x000, 'OcrService', `识别出的文字${result.value}`)
       return result.value;
 
     } catch (err) {

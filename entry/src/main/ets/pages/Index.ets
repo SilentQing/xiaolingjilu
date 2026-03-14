@@ -193,6 +193,7 @@ struct Index {
       .onChange((index: number) => {
         this.currentIndex = index
         this.selectBottomIndex = index;
+        this.refreshTrigger++;
       })
 
     }
