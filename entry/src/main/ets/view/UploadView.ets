@@ -9,9 +9,8 @@ import { util } from "@kit.ArkTS";
 import { PromptAction } from "@kit.ArkUI";
 import { DeepSeekService } from "../service/DeepSeekService";
 import { EmbeddingService } from "../service/EmbeddingService";
+import { StatCard } from "./StatCard";
 
-
-@Entry
 @Component
 export struct UploadView {
   @State selectedImageUri: string = ''; // 存放选中的图片 URI
@@ -26,10 +25,44 @@ export struct UploadView {
   @State editSummary: string = '';
   @State editCategory: Category = Category.Knowledge;
 
+  // 看板数据状态
+  @State billCount: number = 0;
+  @State scheduleCount: number = 0;
+  @State knowledgeCount: number = 0;
+
+  // 接收 Index.ets 传来的刷新信号
+  @Prop @Watch('onTriggerRefresh') refreshTrigger: number = 0;
+
+  // 专门用于响应监听的回调函数
+  onTriggerRefresh() {
+    console.info('UploadView 收到刷新信号，重新加载看板数据');
+    this.loadDashboardData();
+  }
+
   // 获取当前组件的上下文
   private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
   uiContext: UIContext = this.getUIContext();
   promptAction: PromptAction = this.uiContext.getPromptAction();
+
+  aboutToAppear() {
+    this.loadDashboardData();
+    console.info('加载看板数据');
+  }
+
+  // 加载看板统计数据
+  async loadDashboardData() {
+    try {
+      // 获取所有数据进行内存统计（移动端几千条数据统计极快，暂不需要写复杂的 SQL GROUP BY）
+      const allRecords = await RdbManager.getInstance().queryRecords();
+
+      this.billCount = allRecords.filter(item => item.category === Category.Bill).length;
+      this.scheduleCount = allRecords.filter(item => item.category === Category.Schedule).length;
+      this.knowledgeCount = allRecords.filter(item => item.category === Category.Knowledge).length;
+
+    } catch (error) {
+      console.error('看板数据加载失败', error);
+    }
+  }
 
   // 自定义底部面板的 UI 构建器
   @Builder
@@ -109,63 +142,154 @@ export struct UploadView {
       .onClick(() => { this.editCategory = category })
   }
 
+  // 统计数据卡片的 UI 组件
+
+  // @Builder
+  // StatCard(title: string, count: number, bgColor: string, iconUrl: Resource) {
+  //   Column() {
+  //     Row() {
+  //       Image(iconUrl).width(20).height(20).margin({ right: 8 })
+  //       Text(title).fontSize(14).fontColor('#666666')
+  //     }.width('100%').margin({ bottom: 12 })
+  //
+  //     Row() {
+  //       Text(count.toString())
+  //         .fontSize(32)
+  //         .fontWeight(FontWeight.Bolder)
+  //         .fontColor('#182431')
+  //       Text(' 项')
+  //         .fontSize(12)
+  //         .fontColor('#999999')
+  //         .margin({ left: 4, bottom: 4 })
+  //     }.width('100%').alignItems(VerticalAlign.Bottom)
+  //   }
+  //   .width('48%') // 让一行能放下两个半卡片或者两个大卡片
+  //   .padding(16)
+  //   .backgroundColor(bgColor)
+  //   .borderRadius(16)
+  // }
+
   build() {
-    Column() {
-      Text('小玲记录 - 智能提取')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .margin(20)
-
-      // 动态显示区：未选图时显示上传按钮，选中后显示图片预览
-      if (this.selectedImageUri === '') {
-        Column() {
-          Image($r('app.media.upload_placeholder'))
-            .width(80).height(80)
-          Text('点击从相册选择截图')
-            .fontColor('#666666')
-            .fontSize(16)
+    Scroll() {
+      Column() {
+        // 顶部问候语
+        Row() {
+          Column() {
+            Text('早上好，')
+              .fontSize(16)
+              .fontColor('#666666')
+              .margin({ bottom: 4 })
+            Text('你的数字大脑运行良好')
+              .fontSize(22)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#182431')
+          }.alignItems(HorizontalAlign.Start)
         }
-        .width('85%')
-        .height(300)
-        .backgroundColor('#F2F4F5')
-        .borderRadius(16)
-        .justifyContent(FlexAlign.Center)
-        // 绑定点击事件拉起相册
-        .onClick(() => this.pickScreenshot())
+        .width('100%')
+        .padding({ left: 20, right: 20, top: 20, bottom: 20 })
 
-      } else {
-        Column() {
-          // 鸿蒙的 Image 组件可以直接渲染 Picker 返回的 file:// URI
-          Image(this.selectedImageUri)
-            .width('85%')
-            .height(300)
-            .objectFit(ImageFit.Contain)
-            .borderRadius(16)
-            .backgroundColor('#E8E8E8')
-            .margin({ bottom: 20 })
+        // 数据看板区
+        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+          StatCard({
+            title: '账单聚合',
+            count: $billCount,
+            bgColor: '#FFF0F0',
+            iconUrl: $r('app.media.ic_bill')
+          }) // 浅红背景
+          StatCard({
+            title: '待办日程',
+            count: $scheduleCount,
+            bgColor: '#F0F8FF',
+            iconUrl: $r('app.media.ic_schedule')}
+          ) // 浅蓝背景
 
-          if (this.isProcessing) {
-            // 识别中的 Loading
-            LoadingProgress().width(48).height(48).color('#007DFF')
-            Text('AI 正在拼命读取中...').fontSize(14).fontColor('#999999').margin({ top: 8 })
-          } else {
+          // 占据一整行的宽卡片
+          Column() {
             Row() {
-              Button('重新选择')
-                .backgroundColor('#E5E5E5')
-                .fontColor('#333333')
-                .onClick(() => this.pickScreenshot())
+              Image($r('app.media.ic_knowledge')).width(20).height(20).margin({ right: 8 })
+              Text('知识图谱').fontSize(14).fontColor('#666666')
+            }.width('100%').margin({ bottom: 12 })
+            Row() {
+                Text(this.knowledgeCount.toString()).fontSize(32).fontWeight(FontWeight.Bolder).fontColor('#182431')
+                Text(' 条沉淀').fontSize(12).fontColor('#999999').margin({ left: 4, bottom: 4 })
+            }.width('100%').alignItems(VerticalAlign.Bottom)
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor('#F0FFF0') // 浅绿背景
+          .borderRadius(16)
+          .margin({ top: 16 })
+        }
+        .width('100%')
+        .padding({ left: 20, right: 20 })
 
-              Button('开始提取文字')
-                .backgroundColor('#007DFF')
-                .onClick(() => this.startOcr())
+        // 核心操作区 (视觉重心)
+        Column() {
+          if (this.selectedImageUri === '') {
+            Column() {
+              Image($r('app.media.ic_camera_scan')) // 准备一个酷炫的扫描/相册图标
+                .width(48)
+                .height(48)
+                .margin({ bottom: 16 })
+              Text('点击上传截图')
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#182431')
+              Text('支持自动提取账单、日程与摘要')
+                .fontSize(12)
+                .fontColor('#999999')
+                .margin({ top: 8 })
+            }
+            .width('100%')
+            .height(200)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(24)
+            // 鸿蒙原生的物理阴影，增加可点击的暗示
+            .shadow({ radius: 20, color: 'rgba(0, 0, 0, 0.05)', offsetY: 10 })
+            .onClick(() => { this.pickScreenshot(); })
+          } else {
+            Column() {
+              // 鸿蒙的 Image 组件可以直接渲染 Picker 返回的 file:// URI
+              Image(this.selectedImageUri)
+                .width('85%')
+                .height(300)
+                .objectFit(ImageFit.Contain)
+                .borderRadius(16)
+                .margin({ bottom: 20 })
+
+              if (this.isProcessing) {
+                // 识别中的 Loading
+                LoadingProgress().width(64).height(64).color('#007DFF')
+                Text('端云协同解析中...').fontSize(16).fontColor('#007DFF').margin({ top: 16 })
+                Text('正在提取关键信息与生成知识标签').fontSize(12).fontColor('#999999').margin({ top: 8 })
+              } else {
+                Row() {
+                  Button('重新选择')
+                    .backgroundColor('#E5E5E5')
+                    .fontColor('#333333')
+                    .onClick(() => this.pickScreenshot())
+
+                  Button('开始提取文字')
+                    .backgroundColor('#007DFF')
+                    .onClick(() => this.startOcr())
+                }
+              }
             }
           }
-        }.width("100%")
+        }
+        .width('100%')
+        .padding(20)
+        .margin({ top: 20 })
+
       }
+      .width('100%')
+
+
     }
     .width('100%')
     .height('100%')
-    // --- 核心挂载点：绑定底部面板 ---
+    // 核心挂载点：绑定底部面板
     .bindSheet($$this.isShowConfirmSheet, this.ConfirmSheetBuilder(), {
       height: SheetSize.MEDIUM,  // 占据屏幕的中等高度 (大约一半)
       dragBar: true,             // 顶部显示一个小灰条，提示用户可以下拉关闭

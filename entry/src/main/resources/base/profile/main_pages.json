@@ -1,11 +1,6 @@
 {
   "src": [
     "pages/Index",
-    "pages/CategorySelect",
-    "pages/ScheduleAnalyze",
-    "pages/KnowledgeAnalyze",
-    "pages/BillAnalyze",
-    "pages/Bill",
     "pages/RecordDetail"
   ]
 }
