@@ -8,6 +8,7 @@ import { Category, RecordItemData } from "../model/RecordItemData";
 import { util } from "@kit.ArkTS";
 import { PromptAction } from "@kit.ArkUI";
 import { DeepSeekService } from "../service/DeepSeekService";
+import { EmbeddingService } from "../service/EmbeddingService";
 
 
 @Entry
@@ -211,6 +212,11 @@ export struct UploadView {
       this.editTitle = newRecord.title;
       this.editSummary = newRecord.summary;
       this.editCategory = newRecord.category;
+
+      // 把标题、摘要和分类拼起来去获取语义向量
+      const textToEmbed = `[${newRecord.category}] ${newRecord.title}: ${newRecord.summary}`;
+      const vector = await EmbeddingService.getEmbedding(textToEmbed);
+      newRecord.embedding = vector
 
       // 关闭加载动画，拉起底部确认面板
       this.isProcessing = false;

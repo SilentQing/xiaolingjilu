@@ -6,7 +6,6 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DataManager } from '../utils/DataManager';
 import { common } from '@kit.AbilityKit';
-import { TimeUtils } from '../utils/TimeUtils';
 import { Bill } from './Bill';
 import { FileManager } from '../utils/FileManager';
 import EntryAbility from '../entryability/EntryAbility';

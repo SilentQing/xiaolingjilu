@@ -13,4 +13,5 @@ export interface RecordItemData {
   tags: string[];               // 用户自定义标签
   highlightValue?: string; // 金额或时间数值
   createTime: string;     // 创建日期
+  embedding?: number[];   // number[] 序列化后的 JSON 字符串
 }

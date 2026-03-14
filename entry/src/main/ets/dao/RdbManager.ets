@@ -23,7 +23,8 @@ export class RdbManager {
       category TEXT,
       tags TEXT,
       highlight_value TEXT,
-      create_time INTEGER
+      create_time INTEGER,
+      embedding TEXT
     )
   `;
 
@@ -82,7 +83,8 @@ export class RdbManager {
       'tags': JSON.stringify(item.tags || []),
       'highlight_value': item.highlightValue || '',
       // 将字符串时间转换为毫秒时间戳存储，方便后续按时间排序
-      'create_time': new Date(item.createTime).getTime()
+      'create_time': new Date(item.createTime).getTime(),
+      'embedding' : item.embedding ? JSON.stringify(item.embedding) : '[]'
     };
 
     // 执行插入操作，'record_item' 是我们之前建的表名
@@ -98,33 +100,37 @@ export class RdbManager {
    */
   public async queryRecords(category?: string, keyword?: string): Promise<RecordItemData[]> {
     const store = this.getStore();
+    let predicates = new relationalStore.RdbPredicates('record_item');     // 初始化查询条件构造器
 
-    // 初始化查询条件构造器
-    let predicates = new relationalStore.RdbPredicates('record_item');
-
-    // 如果传了分类，则只查该分类（对应列表页顶部的 Tab 切换）
-    if (category) {
-      predicates.equalTo('category', category);
-    }
-
+    if (category) predicates.equalTo('category', category);                // 如果传了分类，则只查该分类（对应列表页顶部的 Tab 切换）
     // 如果传了关键词，则进行模糊搜索（对应搜索页的边输边搜）
     if (keyword) {
       // 标题或摘要包含关键词即可
       predicates.like('title', `%${keyword}%`).or().like('summary', `%${keyword}%`);
     }
-
-    // 默认按创建时间倒序排列（最新的在最上面）
-    predicates.orderByDesc('create_time');
+    predicates.orderByDesc('create_time');                                 // 默认按创建时间倒序排列（最新的在最上面）
 
     // 执行查询，返回 ResultSet 结果集
     let resultSet = await store.query(predicates, [
-      'id', 'image_path', 'title', 'summary', 'category', 'tags', 'highlight_value', 'create_time'
+      'id', 'image_path', 'title', 'summary', 'category', 'tags', 'highlight_value', 'create_time', 'embedding'
     ]);
 
     let results: RecordItemData[] = [];
 
     // 遍历结果集，逐行解析数据
     while (resultSet.goToNextRow()) {
+      let embeddingArray: number[] = [];
+      const embeddingStr = resultSet.getString(resultSet.getColumnIndex('embedding'));
+
+      if (embeddingStr) {
+        try {
+          // 将 "[0.12, -0.45, ...]" 字符串还原为真正的数组
+          embeddingArray = JSON.parse(embeddingStr);
+        } catch (e) {
+          console.error('向量 JSON 解析失败，跳过该字段', e);
+        }
+      }
+
       results.push({
         id: resultSet.getString(resultSet.getColumnIndex('id')),
         imagePath: resultSet.getString(resultSet.getColumnIndex('image_path')),
@@ -135,7 +141,8 @@ export class RdbManager {
         tags: JSON.parse(resultSet.getString(resultSet.getColumnIndex('tags')) || '[]'),
         highlightValue: resultSet.getString(resultSet.getColumnIndex('highlight_value')),
         // 将毫秒时间戳还原为本地日期字符串供 UI 显示
-        createTime: new Date(resultSet.getLong(resultSet.getColumnIndex('create_time'))).toLocaleString()
+        createTime: new Date(resultSet.getLong(resultSet.getColumnIndex('create_time'))).toLocaleString(),
+        embedding: embeddingArray
       });
     }
 
