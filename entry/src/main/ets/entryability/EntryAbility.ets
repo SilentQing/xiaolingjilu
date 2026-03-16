@@ -3,7 +3,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { RdbManager } from '../dao/RdbManager';
 
-// import { DataManager } from '../utils/DataManager';
+import { TokenizerService } from '../service/TokenizerService';
+import { MindSporeService } from '../service/MindSporeService';
 
 const DOMAIN = 0x0000;
 const TAG = 'EntryAbility'
@@ -23,7 +24,32 @@ export default class EntryAbility extends UIAbility {
     // 获取applicationInfo（当前应用信息）
     let applicationInfo = applicationContext.applicationInfo;
 
+    this.initLocalAIEngines();
+
   }
+
+  /**
+   * 专门剥离出来的异步初始化方法
+   */
+  private async initLocalAIEngines() {
+    try {
+      // 获取当前 Ability 的全局资源管理器，只有它有权限读取 rawfile
+      const resMgr = this.context.resourceManager;
+
+      hilog.info(0x0000, 'EntryAbility', '=== 开始后台初始化端侧 AI 双核引擎 ===');
+
+      // 1. 初始化轻量级分词器 (加载 vocab.txt 字典)
+      await TokenizerService.init(resMgr);
+
+      // 2. 初始化 MindSpore Lite NPU 推理引擎 (加载 .ms 模型)
+      await MindSporeService.init(resMgr);
+
+      hilog.info(0x0000, 'EntryAbility', '=== 端侧 AI 引擎全部就绪！火力全开 ===');
+    } catch (error) {
+      hilog.error(0x0000, 'EntryAbility', `引擎初始化遭遇致命错误: ${JSON.stringify(error)}`);
+    }
+  }
+
 
   onDestroy(): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');

@@ -62,15 +62,25 @@ export class DeepSeekService {
   static async analyzeText(rawText: string, imagePath: string): Promise<RecordItemData> {
     const httpRequest = http.createHttp();
 
+    // 获取当前的绝对时间，并格式化为大模型容易理解的中文格式
+    const now = new Date();
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    const currentTimeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${days[now.getDay()]} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
     // System Prompt
     const systemPrompt = `你是一个出色的信息提取引擎。请阅读用户提供的 OCR 文本，提取核心信息并进行分类。
+
+    【重要时间锚点】
+    当前系统的真实时间是：${currentTimeStr}。
+    如果文本中包含相对时间（如“明天”、“后天”、“下周三”、“今天下午”等），请务必基于上述【当前真实时间】进行严密的逻辑推算，将其转化为绝对时间。
+
     你必须严格按照以下 JSON 格式输出，不要包含任何 Markdown 标记（如 \`\`\`json）或其他解释性废话：
     {
       "title": "简短且高度概括的标题，最多10个字",
       "summary": "提炼文本的核心摘要，最多50个字",
       "category": "必须严格输出这三个英文单词之一：Bill, Schedule, Knowledge",
       "tags": ["标签1", "标签2", "最多生成3个相关标签"],
-      "highlightValue": "如果是Bill提取出金额数字，如果是Schedule提取出核心时间，如果是Knowledge填空字符串"
+      "highlightValue": "如果是 Bill 提取出具体金额（如 ¥18.50），如果是 Schedule 提取出推算后的具体时间（请务必统一格式为 YYYY-MM-DD HH:mm），如果是 Knowledge 则填空字符串"
     }`;
 
     // 构造发给大模型的请求体
@@ -113,7 +123,8 @@ export class DeepSeekService {
           id: util.generateRandomUUID(),
           imagePath: 'file://' + imagePath,
           title: aiResult.title || '未命名记录',
-          summary: aiResult.summary || rawText.substring(0, 50),
+          // summary: aiResult.summary || rawText.substring(0, 50),
+          summary: rawText,
           category: aiResult.category as Category || Category.Knowledge,
           tags: aiResult.tags || [],
           highlightValue: aiResult.highlightValue || '',

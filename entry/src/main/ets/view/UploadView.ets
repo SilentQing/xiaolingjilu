@@ -10,6 +10,7 @@ import { PromptAction } from "@kit.ArkUI";
 import { DeepSeekService } from "../service/DeepSeekService";
 import { EmbeddingService } from "../service/EmbeddingService";
 import { StatCard } from "./StatCard";
+import { InformationExtractionService } from "../service/InformationExtractionService";
 
 @Component
 export struct UploadView {
@@ -143,7 +144,6 @@ export struct UploadView {
   }
 
   // 统计数据卡片的 UI 组件
-
   // @Builder
   // StatCard(title: string, count: number, bgColor: string, iconUrl: Resource) {
   //   Column() {
@@ -312,9 +312,47 @@ export struct UploadView {
         // 获取选中图片的系统 URI (格式类似 file://media/Photo/...)
         this.selectedImageUri = photoSelectResult.photoUris[0];
         hilog.info(0x0000, 'UploadView', `图片选择成功: ${this.selectedImageUri}`);
+        await this.processImage(this.selectedImageUri);
       }
     } catch (err) {
       hilog.error(0x0000, 'UploadView', `图片选择失败: ${JSON.stringify(err)}`);
+    }
+  }
+
+  async processImage(uri: string) {
+    this.isProcessing = true; // 触发界面的“端云协同解析中...”动画
+
+    try {
+      // 1. 将相册 URI 拷贝到应用沙箱 (FileManager 是你之前可能写好的工具类)
+      const sandboxPath = await FileManager.copyImageToSandbox(this.context, this.selectedImageUri);  // 拷贝图片到沙箱
+      // 2. 调用鸿蒙系统级 OCR 提取文本 (纯本地极速提取)
+      const rawText = await OcrService.extractText(sandboxPath);
+
+      if (!rawText || rawText.trim() === '') {
+        this.promptAction.openToast({ message: '未能在截图中识别到有效文字' });
+        this.isProcessing = false;
+        return;
+      }
+
+      // 3. 【高光时刻】将生肉文本扔给我们的端云协同中枢！
+      // 它会在底层自动决定是用 MindSpore 秒切账单，还是用 DeepSeek 提炼知识
+      const extractedResult = await InformationExtractionService.processOcrText(rawText, sandboxPath);
+
+      // 4. 解析成功，将底层返回的数据绑定到 UI 的编辑状态上
+      this.pendingRecord = extractedResult;
+      this.editTitle = extractedResult.title;
+      this.editSummary = extractedResult.summary;
+      this.editCategory = extractedResult.category;
+
+      // 5. 触发并拉起底部的半模态确认弹窗 (ConfirmSheet)
+      this.isShowConfirmSheet = true;
+
+    } catch (error) {
+      console.error('全链路解析遭遇异常', error);
+      this.promptAction.openToast({ message: '解析异常，请检查网络或日志' });
+    } finally {
+      // 无论成功失败，关闭 Loading 动画
+      this.isProcessing = false;
     }
   }
 
@@ -354,49 +392,47 @@ export struct UploadView {
     }
   }
 
-  /**
-   * 使用自定义正则规则，将杂乱的 OCR 文本结构化为数据库对象
-   */
-  private analyzeTextWithCustomRules(text: string, path: string): RecordItemData {
-    hilog.info(0x000, 'imagePath', `get path: ${path}`)
-    // 默认兜底分类为“知识”
-    let category: Category = Category.Knowledge;
-    let highlightValue = '';
-
-    // 账单匹配规则（寻找金额）
-    const billRegex = /(?:支付|金额|合计|¥|￥)\s*(\d+(\.\d{1,2})?)/;
-    const billMatch = text.match(billRegex);
-
-    // 日程匹配规则（寻找日期时间）
-    const scheduleRegex = /(?:明天|后天|周[一二三四五六日]|\d{1,2}月\d{1,2}日)\s*\d{1,2}:\d{2}/;
-    const scheduleMatch = text.match(scheduleRegex);
-
-    if (billMatch) {
-      category = Category.Bill;
-      highlightValue = billMatch[1]; // 提取出的具体金额数字
-    } else if (scheduleMatch) {
-      category = Category.Schedule;
-      highlightValue = scheduleMatch[0]; // 提取出的具体时间段
-    }
-
-    // 简单截取前 10 个字作为标题，前 50 个字作为摘要
-    const cleanText = text.replace(/\s+/g, ' '); // 替换换行和多余空格
-    const title = cleanText.substring(0, 10);
-    const summary = cleanText.substring(0, 50) + (cleanText.length > 50 ? '...' : '');
-
-    return {
-      id: util.generateRandomUUID(), // 生成唯一 ID
-      imagePath: 'file://' + path,
-      title: title,
-      summary: summary,
-      category: category,
-      tags: [], // 初始标签为空，留给用户后续手动在详情页加
-      highlightValue: highlightValue,
-      createTime: new Date().toISOString()
-    };
-
-
-  }
+  // /**
+  //  * 使用自定义正则规则，将杂乱的 OCR 文本结构化为数据库对象
+  //  */
+  // private analyzeTextWithCustomRules(text: string, path: string): RecordItemData {
+  //   hilog.info(0x000, 'imagePath', `get path: ${path}`)
+  //   // 默认兜底分类为“知识”
+  //   let category: Category = Category.Knowledge;
+  //   let highlightValue = '';
+  //
+  //   // 账单匹配规则（寻找金额）
+  //   const billRegex = /(?:支付|金额|合计|¥|￥)\s*(\d+(\.\d{1,2})?)/;
+  //   const billMatch = text.match(billRegex);
+  //
+  //   // 日程匹配规则（寻找日期时间）
+  //   const scheduleRegex = /(?:明天|后天|周[一二三四五六日]|\d{1,2}月\d{1,2}日)\s*\d{1,2}:\d{2}/;
+  //   const scheduleMatch = text.match(scheduleRegex);
+  //
+  //   if (billMatch) {
+  //     category = Category.Bill;
+  //     highlightValue = billMatch[1]; // 提取出的具体金额数字
+  //   } else if (scheduleMatch) {
+  //     category = Category.Schedule;
+  //     highlightValue = scheduleMatch[0]; // 提取出的具体时间段
+  //   }
+  //
+  //   // 简单截取前 10 个字作为标题，前 50 个字作为摘要
+  //   const cleanText = text.replace(/\s+/g, ' '); // 替换换行和多余空格
+  //   const title = cleanText.substring(0, 10);
+  //   const summary = cleanText.substring(0, 50) + (cleanText.length > 50 ? '...' : '');
+  //
+  //   return {
+  //     id: util.generateRandomUUID(), // 生成唯一 ID
+  //     imagePath: 'file://' + path,
+  //     title: title,
+  //     summary: summary,
+  //     category: category,
+  //     tags: [], // 初始标签为空，留给用户后续手动在详情页加
+  //     highlightValue: highlightValue,
+  //     createTime: new Date().toISOString()
+  //   };
+  // }
 
   // 保存入库方法
   async saveRecord() {
