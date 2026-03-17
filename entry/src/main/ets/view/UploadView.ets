@@ -65,71 +65,175 @@ export struct UploadView {
     }
   }
 
-  // 自定义底部面板的 UI 构建器
+  // // 自定义底部面板的 UI 构建器
+  // @Builder
+  // ConfirmSheetBuilder() {
+  //   Column() {
+  //     // 表单区
+  //     Column({ space: 16 }) {
+  //       // 分类选择 (用胶囊按钮组模拟)
+  //       Row({ space: 12 }) {
+  //         Text('分类').fontSize(16).fontWeight(FontWeight.Medium).width(50)
+  //         this.CategoryButton('账单', Category.Bill)
+  //         this.CategoryButton('日程', Category.Schedule)
+  //         this.CategoryButton('知识', Category.Knowledge)
+  //       }.width('100%')
+  //
+  //       // 标题输入框
+  //       Row() {
+  //         Text('标题').fontSize(16).fontWeight(FontWeight.Medium).width(50)
+  //         TextInput({ text: this.editTitle, placeholder: '请输入简短标题' })
+  //           .layoutWeight(1)
+  //           .onChange((value: string) => { this.editTitle = value })
+  //       }.width('100%')
+  //
+  //       // 摘要输入框 (多行文本)
+  //       Column() {
+  //         Text('摘要内容').fontSize(16).fontWeight(FontWeight.Medium).width('100%').margin({ bottom: 8 })
+  //         TextArea({ text: this.editSummary })
+  //           .width('100%')
+  //           .height(120) // 给足够的高度看完整理后的文字
+  //           .onChange((value: string) => { this.editSummary = value })
+  //       }.width('100%')
+  //     }
+  //     .padding({ left: 20, right: 20 })
+  //     .layoutWeight(1)
+  //
+  //     // 底部操作按钮
+  //     Row({ space: 16 }) {
+  //       Button('取消')
+  //         .backgroundColor('#F2F2F2')
+  //         .fontColor('#333333')
+  //         .layoutWeight(1)
+  //         .onClick(() => { this.isShowConfirmSheet = false })
+  //
+  //       Button('保存记录')
+  //         .backgroundColor('#007DFF')
+  //         .layoutWeight(1)
+  //         .onClick(() => this.saveRecord())
+  //     }
+  //     .width('100%')
+  //     .padding(20)
+  //   }
+  //   .width('100%')
+  //   .height('100%')
+  //   .backgroundColor(Color.White)
+  //   .borderRadius({ topLeft: 24, topRight: 24 }) // 圆角设计更显原生
+  // }
+
   @Builder
   ConfirmSheetBuilder() {
     Column() {
-      // 面板标题
-      Row() {
-        Text('确认并完善信息')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-      }
-      .width('100%')
-      .padding({ top: 16, bottom: 16 })
-      .justifyContent(FlexAlign.Center)
+      // 1. 弹窗标题
+      Text('确认智能提取结果')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor('#212529')
+        .margin({ top: 16, bottom: 16 })
 
-      // 表单区
-      Column({ space: 16 }) {
-        // 分类选择 (用胶囊按钮组模拟)
-        Row({ space: 12 }) {
-          Text('分类').fontSize(16).fontWeight(FontWeight.Medium).width(50)
-          this.CategoryButton('账单', Category.Bill)
-          this.CategoryButton('日程', Category.Schedule)
-          this.CategoryButton('知识', Category.Knowledge)
-        }.width('100%')
+      if (this.pendingRecord) {
+        Scroll() {
+          Column({ space: 16 }) {
+            // 2. 原图预览 (圆角沉浸式)
+            Image(this.pendingRecord.imagePath)
+              .width('100%')
+              .height(200)
+              .objectFit(ImageFit.Contain)
+              .borderRadius(12)
+              .backgroundColor('#E9ECEF')
 
-        // 标题输入框
-        Row() {
-          Text('标题').fontSize(16).fontWeight(FontWeight.Medium).width(50)
-          TextInput({ text: this.editTitle, placeholder: '请输入简短标题' })
-            .layoutWeight(1)
-            .onChange((value: string) => { this.editTitle = value })
-        }.width('100%')
+            // 3. 核心标签与高亮数值 (金额/日期)
+            Row() {
+              // 类别徽章 (动态变色)
+              Text(this.pendingRecord.category === Category.Bill ? '💸 消费账单' : '📅 知识/日程')
+                .fontColor(Color.White)
+                .backgroundColor(this.pendingRecord.category === Category.Bill ? '#FA5252' : '#228BE6')
+                .padding({ top: 6, bottom: 6, left: 12, right: 12 })
+                .borderRadius(20)
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
 
-        // 摘要输入框 (多行文本)
-        Column() {
-          Text('摘要内容').fontSize(16).fontWeight(FontWeight.Medium).width('100%').margin({ bottom: 8 })
-          TextArea({ text: this.editSummary })
+              Blank() // 撑开空间
+
+              // 高亮提取值 (例如：金额 ¥18.50)
+              if (this.pendingRecord.highlightValue) {
+                Text(this.pendingRecord.highlightValue)
+                  .fontSize(28)
+                  .fontWeight(FontWeight.Bolder)
+                  .fontColor('#E03131')
+              }
+            }
             .width('100%')
-            .height(120) // 给足够的高度看完整理后的文字
-            .onChange((value: string) => { this.editSummary = value })
-        }.width('100%')
-      }
-      .padding({ left: 20, right: 20 })
-      .layoutWeight(1)
+            .padding({ left: 4, right: 4 })
 
-      // 底部操作按钮
-      Row({ space: 16 }) {
-        Button('取消')
-          .backgroundColor('#F2F2F2')
-          .fontColor('#333333')
-          .layoutWeight(1)
-          .onClick(() => { this.isShowConfirmSheet = false })
+            // 4. 标题编辑框
+            Column({ space: 8 }) {
+              Text('标题').fontSize(14).fontColor('#868E96').fontWeight(FontWeight.Medium)
+              TextInput({ text: this.pendingRecord.title })
+                .onChange((value) => { this.pendingRecord!.title = value; })
+                .backgroundColor('#F1F3F5')
+                .borderRadius(8)
+            }.width('100%').alignItems(HorizontalAlign.Start)
 
-        Button('保存记录')
-          .backgroundColor('#007DFF')
-          .layoutWeight(1)
-          .onClick(() => this.saveRecord())
+            // 5. 智能标签流式布局 (Flex)
+            if (this.pendingRecord.tags && this.pendingRecord.tags.length > 0) {
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach(this.pendingRecord.tags, (tag: string) => {
+                  Text(`# ${tag}`)
+                    .fontSize(13)
+                    .fontColor('#495057')
+                    .backgroundColor('#E9ECEF')
+                    .padding({ top: 6, bottom: 6, left: 10, right: 10 })
+                    .borderRadius(16)
+                    .margin({ right: 8, bottom: 8 })
+                })
+              }.width('100%')
+            }
+
+            // 6. 摘要内容编辑框
+            Column({ space: 8 }) {
+              Text('内容摘要').fontSize(14).fontColor('#868E96').fontWeight(FontWeight.Medium)
+              TextArea({ text: this.pendingRecord.summary })
+                .onChange((value) => { this.pendingRecord!.summary = value; })
+                .height(100)
+                .backgroundColor('#F1F3F5')
+                .borderRadius(8)
+            }.width('100%').alignItems(HorizontalAlign.Start)
+          }
+          .padding({ left: 20, right: 20 })
+        }
+        .layoutWeight(1) // 滚动区域占据剩余所有空间
+        .scrollBar(BarState.Off)
+
+        // 7. 底部操作按钮栏
+        Row({ space: 16 }) {
+          Button('放弃')
+            .type(ButtonType.Normal)
+            .borderRadius(12)
+            .backgroundColor('#F8F9FA')
+            .fontColor('#495057')
+            .layoutWeight(1)
+            .onClick(() => { this.isShowConfirmSheet = false; })
+
+          Button('入库保存')
+            .type(ButtonType.Normal)
+            .borderRadius(12)
+            .backgroundColor('#228BE6')
+            .layoutWeight(1)
+            .onClick(() => {
+              this.saveRecord();
+            })
+        }
+        .width('100%')
+        .padding({ left: 20, right: 20, top: 16, bottom: 24 })
+        .backgroundColor(Color.White)
       }
-      .width('100%')
-      .padding(20)
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.White)
-    .borderRadius({ topLeft: 24, topRight: 24 }) // 圆角设计更显原生
   }
+
+
 
   // 辅助构建器：用于渲染分类按钮
   @Builder
@@ -142,32 +246,6 @@ export struct UploadView {
       .borderRadius(16)
       .onClick(() => { this.editCategory = category })
   }
-
-  // 统计数据卡片的 UI 组件
-  // @Builder
-  // StatCard(title: string, count: number, bgColor: string, iconUrl: Resource) {
-  //   Column() {
-  //     Row() {
-  //       Image(iconUrl).width(20).height(20).margin({ right: 8 })
-  //       Text(title).fontSize(14).fontColor('#666666')
-  //     }.width('100%').margin({ bottom: 12 })
-  //
-  //     Row() {
-  //       Text(count.toString())
-  //         .fontSize(32)
-  //         .fontWeight(FontWeight.Bolder)
-  //         .fontColor('#182431')
-  //       Text(' 项')
-  //         .fontSize(12)
-  //         .fontColor('#999999')
-  //         .margin({ left: 4, bottom: 4 })
-  //     }.width('100%').alignItems(VerticalAlign.Bottom)
-  //   }
-  //   .width('48%') // 让一行能放下两个半卡片或者两个大卡片
-  //   .padding(16)
-  //   .backgroundColor(bgColor)
-  //   .borderRadius(16)
-  // }
 
   build() {
     Scroll() {
@@ -223,6 +301,8 @@ export struct UploadView {
         .width('100%')
         .padding({ left: 20, right: 20 })
 
+        Blank() // 把按钮推到下方或居中
+
         // 核心操作区 (视觉重心)
         Column() {
           if (this.selectedImageUri === '') {
@@ -269,10 +349,6 @@ export struct UploadView {
                     .backgroundColor('#E5E5E5')
                     .fontColor('#333333')
                     .onClick(() => this.pickScreenshot())
-
-                  Button('开始提取文字')
-                    .backgroundColor('#007DFF')
-                    .onClick(() => this.startOcr())
                 }
               }
             }
@@ -334,7 +410,7 @@ export struct UploadView {
         return;
       }
 
-      // 3. 【高光时刻】将生肉文本扔给我们的端云协同中枢！
+      // 将生肉文本扔给我们的端云协同中枢！
       // 它会在底层自动决定是用 MindSpore 秒切账单，还是用 DeepSeek 提炼知识
       const extractedResult = await InformationExtractionService.processOcrText(rawText, sandboxPath);
 
