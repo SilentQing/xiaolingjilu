@@ -6,7 +6,7 @@ import { OcrService } from "../service/OcrService";
 import { RdbManager } from "../dao/RdbManager";
 import { Category, RecordItemData } from "../model/RecordItemData";
 import { util } from "@kit.ArkTS";
-import { PromptAction } from "@kit.ArkUI";
+import { display, PromptAction, window } from "@kit.ArkUI";
 import { DeepSeekService } from "../service/DeepSeekService";
 import { EmbeddingService } from "../service/EmbeddingService";
 import { StatCard } from "./StatCard";
@@ -34,6 +34,8 @@ export struct UploadView {
   // 接收 Index.ets 传来的刷新信号
   @Prop @Watch('onTriggerRefresh') refreshTrigger: number = 0;
 
+  @State displayHeight:number = 0;
+
   // 专门用于响应监听的回调函数
   onTriggerRefresh() {
     console.info('UploadView 收到刷新信号，重新加载看板数据');
@@ -48,6 +50,15 @@ export struct UploadView {
   aboutToAppear() {
     this.loadDashboardData();
     console.info('加载看板数据');
+
+    let displayClass: display.Display | null = null;
+    try {
+      displayClass = display.getDefaultDisplaySync();
+      this.displayHeight = displayClass.height;
+    } catch (exception) {
+      console.error(`Failed to get default display. Code: ${exception.code}, message: ${exception.message}`);
+    }
+
   }
 
   // 加载看板统计数据
@@ -65,66 +76,10 @@ export struct UploadView {
     }
   }
 
-  // // 自定义底部面板的 UI 构建器
-  // @Builder
-  // ConfirmSheetBuilder() {
-  //   Column() {
-  //     // 表单区
-  //     Column({ space: 16 }) {
-  //       // 分类选择 (用胶囊按钮组模拟)
-  //       Row({ space: 12 }) {
-  //         Text('分类').fontSize(16).fontWeight(FontWeight.Medium).width(50)
-  //         this.CategoryButton('账单', Category.Bill)
-  //         this.CategoryButton('日程', Category.Schedule)
-  //         this.CategoryButton('知识', Category.Knowledge)
-  //       }.width('100%')
-  //
-  //       // 标题输入框
-  //       Row() {
-  //         Text('标题').fontSize(16).fontWeight(FontWeight.Medium).width(50)
-  //         TextInput({ text: this.editTitle, placeholder: '请输入简短标题' })
-  //           .layoutWeight(1)
-  //           .onChange((value: string) => { this.editTitle = value })
-  //       }.width('100%')
-  //
-  //       // 摘要输入框 (多行文本)
-  //       Column() {
-  //         Text('摘要内容').fontSize(16).fontWeight(FontWeight.Medium).width('100%').margin({ bottom: 8 })
-  //         TextArea({ text: this.editSummary })
-  //           .width('100%')
-  //           .height(120) // 给足够的高度看完整理后的文字
-  //           .onChange((value: string) => { this.editSummary = value })
-  //       }.width('100%')
-  //     }
-  //     .padding({ left: 20, right: 20 })
-  //     .layoutWeight(1)
-  //
-  //     // 底部操作按钮
-  //     Row({ space: 16 }) {
-  //       Button('取消')
-  //         .backgroundColor('#F2F2F2')
-  //         .fontColor('#333333')
-  //         .layoutWeight(1)
-  //         .onClick(() => { this.isShowConfirmSheet = false })
-  //
-  //       Button('保存记录')
-  //         .backgroundColor('#007DFF')
-  //         .layoutWeight(1)
-  //         .onClick(() => this.saveRecord())
-  //     }
-  //     .width('100%')
-  //     .padding(20)
-  //   }
-  //   .width('100%')
-  //   .height('100%')
-  //   .backgroundColor(Color.White)
-  //   .borderRadius({ topLeft: 24, topRight: 24 }) // 圆角设计更显原生
-  // }
-
   @Builder
   ConfirmSheetBuilder() {
     Column() {
-      // 1. 弹窗标题
+      // 弹窗标题
       Text('确认智能提取结果')
         .fontSize(20)
         .fontWeight(FontWeight.Bolder)
@@ -134,7 +89,7 @@ export struct UploadView {
       if (this.pendingRecord) {
         Scroll() {
           Column({ space: 16 }) {
-            // 2. 原图预览 (圆角沉浸式)
+            // 原图预览 (圆角沉浸式)
             Image(this.pendingRecord.imagePath)
               .width('100%')
               .height(200)
@@ -142,7 +97,7 @@ export struct UploadView {
               .borderRadius(12)
               .backgroundColor('#E9ECEF')
 
-            // 3. 核心标签与高亮数值 (金额/日期)
+            // 核心标签与高亮数值 (金额/日期)
             Row() {
               // 类别徽章 (动态变色)
               Text(this.pendingRecord.category === Category.Bill ? '💸 消费账单' : '📅 知识/日程')
@@ -166,7 +121,7 @@ export struct UploadView {
             .width('100%')
             .padding({ left: 4, right: 4 })
 
-            // 4. 标题编辑框
+            // 标题编辑框
             Column({ space: 8 }) {
               Text('标题').fontSize(14).fontColor('#868E96').fontWeight(FontWeight.Medium)
               TextInput({ text: this.pendingRecord.title })
@@ -175,7 +130,7 @@ export struct UploadView {
                 .borderRadius(8)
             }.width('100%').alignItems(HorizontalAlign.Start)
 
-            // 5. 智能标签流式布局 (Flex)
+            // 智能标签流式布局 (Flex)
             if (this.pendingRecord.tags && this.pendingRecord.tags.length > 0) {
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.pendingRecord.tags, (tag: string) => {
@@ -190,7 +145,7 @@ export struct UploadView {
               }.width('100%')
             }
 
-            // 6. 摘要内容编辑框
+            // 摘要内容编辑框
             Column({ space: 8 }) {
               Text('内容摘要').fontSize(14).fontColor('#868E96').fontWeight(FontWeight.Medium)
               TextArea({ text: this.pendingRecord.summary })
@@ -232,8 +187,6 @@ export struct UploadView {
     .width('100%')
     .height('100%')
   }
-
-
 
   // 辅助构建器：用于渲染分类按钮
   @Builder
@@ -307,7 +260,7 @@ export struct UploadView {
         Column() {
           if (this.selectedImageUri === '') {
             Column() {
-              Image($r('app.media.ic_camera_scan')) // 准备一个酷炫的扫描/相册图标
+              Image($r('app.media.ic_camera_scan')) // 扫描图标
                 .width(48)
                 .height(48)
                 .margin({ bottom: 16 })
@@ -367,10 +320,11 @@ export struct UploadView {
     .height('100%')
     // 核心挂载点：绑定底部面板
     .bindSheet($$this.isShowConfirmSheet, this.ConfirmSheetBuilder(), {
-      height: SheetSize.MEDIUM,  // 占据屏幕的中等高度 (大约一半)
-      dragBar: true,             // 顶部显示一个小灰条，提示用户可以下拉关闭
+      height: this.displayHeight*0.7,  // 占据屏幕的70%高度
+      dragBar:true,
       backgroundColor: Color.White,
-      showClose: false           // 隐藏系统自带的关闭按钮，我们自己画了“取消”
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL,
+      showClose: false           // 隐藏系统自带的关闭按钮
     })
   }
 
@@ -399,9 +353,9 @@ export struct UploadView {
     this.isProcessing = true; // 触发界面的“端云协同解析中...”动画
 
     try {
-      // 1. 将相册 URI 拷贝到应用沙箱 (FileManager 是你之前可能写好的工具类)
+      // 将相册 URI 拷贝到应用沙箱 (FileManager 是你之前可能写好的工具类)
       const sandboxPath = await FileManager.copyImageToSandbox(this.context, this.selectedImageUri);  // 拷贝图片到沙箱
-      // 2. 调用鸿蒙系统级 OCR 提取文本 (纯本地极速提取)
+      // 调用鸿蒙系统级 OCR 提取文本 (纯本地极速提取)
       const rawText = await OcrService.extractText(sandboxPath);
 
       if (!rawText || rawText.trim() === '') {
@@ -414,13 +368,13 @@ export struct UploadView {
       // 它会在底层自动决定是用 MindSpore 秒切账单，还是用 DeepSeek 提炼知识
       const extractedResult = await InformationExtractionService.processOcrText(rawText, sandboxPath);
 
-      // 4. 解析成功，将底层返回的数据绑定到 UI 的编辑状态上
+      // 解析成功，将底层返回的数据绑定到 UI 的编辑状态上
       this.pendingRecord = extractedResult;
       this.editTitle = extractedResult.title;
       this.editSummary = extractedResult.summary;
       this.editCategory = extractedResult.category;
 
-      // 5. 触发并拉起底部的半模态确认弹窗 (ConfirmSheet)
+      // 触发并拉起底部的半模态确认弹窗 (ConfirmSheet)
       this.isShowConfirmSheet = true;
 
     } catch (error) {
@@ -467,48 +421,6 @@ export struct UploadView {
       this.promptAction.openToast({ message: '文字提取失败，请重试' });
     }
   }
-
-  // /**
-  //  * 使用自定义正则规则，将杂乱的 OCR 文本结构化为数据库对象
-  //  */
-  // private analyzeTextWithCustomRules(text: string, path: string): RecordItemData {
-  //   hilog.info(0x000, 'imagePath', `get path: ${path}`)
-  //   // 默认兜底分类为“知识”
-  //   let category: Category = Category.Knowledge;
-  //   let highlightValue = '';
-  //
-  //   // 账单匹配规则（寻找金额）
-  //   const billRegex = /(?:支付|金额|合计|¥|￥)\s*(\d+(\.\d{1,2})?)/;
-  //   const billMatch = text.match(billRegex);
-  //
-  //   // 日程匹配规则（寻找日期时间）
-  //   const scheduleRegex = /(?:明天|后天|周[一二三四五六日]|\d{1,2}月\d{1,2}日)\s*\d{1,2}:\d{2}/;
-  //   const scheduleMatch = text.match(scheduleRegex);
-  //
-  //   if (billMatch) {
-  //     category = Category.Bill;
-  //     highlightValue = billMatch[1]; // 提取出的具体金额数字
-  //   } else if (scheduleMatch) {
-  //     category = Category.Schedule;
-  //     highlightValue = scheduleMatch[0]; // 提取出的具体时间段
-  //   }
-  //
-  //   // 简单截取前 10 个字作为标题，前 50 个字作为摘要
-  //   const cleanText = text.replace(/\s+/g, ' '); // 替换换行和多余空格
-  //   const title = cleanText.substring(0, 10);
-  //   const summary = cleanText.substring(0, 50) + (cleanText.length > 50 ? '...' : '');
-  //
-  //   return {
-  //     id: util.generateRandomUUID(), // 生成唯一 ID
-  //     imagePath: 'file://' + path,
-  //     title: title,
-  //     summary: summary,
-  //     category: category,
-  //     tags: [], // 初始标签为空，留给用户后续手动在详情页加
-  //     highlightValue: highlightValue,
-  //     createTime: new Date().toISOString()
-  //   };
-  // }
 
   // 保存入库方法
   async saveRecord() {

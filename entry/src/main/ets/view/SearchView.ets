@@ -191,44 +191,6 @@ export struct SearchView {
           .layoutWeight(1)
           .edgeEffect(EdgeEffect.Spring)
         }
-
-        // if (this.searchKeyword.trim() === '') {
-        //   // 空白状态：提示用户输入
-        //   Column() {
-        //     Image($r('app.media.search_placeholder')) // 搜索引导的占位图，放大镜
-        //       .width(120).height(120).margin({ bottom: 16, top: 80 })
-        //     Text('输入关键词查找记录')
-        //       .fontColor('#999999')
-        //       .fontSize(14)
-        //   }.width('100%').alignItems(HorizontalAlign.Center)
-        //
-        // } else if (this.searchResults.length === 0) {
-        //   // 无结果状态
-        //   Text(`找不到与 "${this.searchKeyword}" 相关的记录`)
-        //     .fontColor('#999999')
-        //     .fontSize(14)
-        //     .margin({ top: 80 })
-        //
-        // } else {
-        //   // 渲染复用的列表卡片
-        //   List({ space: 0 }) {
-        //     ForEach(this.searchResults, (item: RecordItemData) => {
-        //       ListItem() {
-        //         RecordItem({ item: item })
-        //       }
-        //       .padding({ left: 16, right: 16 })
-        //       .onClick(() => {
-        //         // 点击搜索出来的卡片，同样跳转到详情页
-        //         this.getUIContext().getRouter().pushUrl({
-        //           url: 'pages/RecordDetail',
-        //           params: { recordInfo: item }
-        //         });
-        //       })
-        //     }, (item: RecordItemData) => item.id)
-        //   }
-        //   .width('100%')
-        //   .layoutWeight(1)
-        // }
       }
       .width('100%')
       .layoutWeight(1)

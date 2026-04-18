@@ -68,7 +68,7 @@ export struct RecordItem {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      // 3. 右侧：高光展示区 (根据分类动态显示)
+      // 右侧：高光展示区 (根据分类动态显示)
       Column() {
         if (this.item.category === Category.Bill && this.item.highlightValue) {
           // 账单显示金额
@@ -89,7 +89,7 @@ export struct RecordItem {
             .fontColor(this.getCategoryColor())
         }
       }
-      .width(60)
+      .width(70)
       .justifyContent(FlexAlign.Center)
     }
     .width('100%')

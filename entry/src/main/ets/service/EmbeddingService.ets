@@ -48,7 +48,7 @@ export class EmbeddingService {
 
     // 构造智谱 API 需要的请求体
     const requestBody: GMLRequestBody = {
-      model: "embedding-2", // 智谱主流且性价比极高的向量模型
+      model: "embedding-2",
       input: text
     };
 
@@ -59,11 +59,10 @@ export class EmbeddingService {
         method: http.RequestMethod.POST,
         header: {
           'Content-Type': 'application/json',
-          // 智谱 V4 接口规范：直接在 Bearer 后拼接 API Key 即可
           'Authorization': `Bearer ${EmbeddingService.API_KEY}`
         },
         extraData: JSON.stringify(requestBody),
-        readTimeout: 10000, // 向量化通常非常快，10秒超时足够
+        readTimeout: 10000,
         connectTimeout: 10000
       });
 
@@ -80,7 +79,6 @@ export class EmbeddingService {
       }
     } catch (error) {
       hilog.error(0x0000, 'EmbeddingService', `获取向量异常: ${JSON.stringify(error)}`);
-      // 容错兜底：即使向量化失败，也不要让应用崩溃，返回空数组让纯文本照常入库
       return [];
     } finally {
       // 释放底层 C++ 网络句柄

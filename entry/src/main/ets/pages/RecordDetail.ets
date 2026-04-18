@@ -77,7 +77,7 @@ struct RecordDetail {
     Stack() {
       // --- 底层：常规详情页面 ---
       Column() {
-        // 1. 自定义顶部导航栏
+        // 自定义顶部导航栏
         Row() {
           Image($r('app.media.ic_back')) // 请准备一个返回箭头图标
             .width(24).height(24)
@@ -92,7 +92,7 @@ struct RecordDetail {
           // 右上角的删除按钮
           Image($r('app.media.ic_delete')) // 垃圾桶图标
             .width(24).height(24)
-            .fillColor('#FF5E5E') // 如果是 svg 图标，可以直接填色
+            .fillColor('#FF5E5E')
             .onClick(() => {
               this.handleDelete();
             })
@@ -124,7 +124,6 @@ struct RecordDetail {
                   .geometryTransition(`zoom_img_${this.record.id}`)
                   .onClick(() => {
                     // 点击图片，打开全屏预览
-                    // --- 新增：使用 animateTo 触发显式动画 ---
                     this.uiContext?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn } , () => {
                       this.isPreviewOpen = true;
                     })
@@ -187,7 +186,6 @@ struct RecordDetail {
                   .lineHeight(24)
                   .fontColor('#333333')
                   .width('100%')
-                  // 【毕设高分技巧】：允许用户长按复制这段文字
                   .copyOption(CopyOptions.LocalDevice)
               }
               .width('100%')
@@ -213,7 +211,6 @@ struct RecordDetail {
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain) // 全屏模式下保持比例，不裁剪
-            // --- 新增：必须和起点的几何转场 ID 一致 ---
             .geometryTransition(`zoom_img_${this.record.id}`)
             .onClick(() => {
               this.uiContext?.animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {

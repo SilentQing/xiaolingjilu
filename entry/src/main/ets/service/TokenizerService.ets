@@ -27,14 +27,14 @@ export class TokenizerService {
     try {
       hilog.info(0x0000, 'Tokenizer', '开始加载 vocab.txt 字典...');
 
-      // 1. 读取 rawfile 中的字典文件内容 (返回的是 Uint8Array 字节流)
+      // 读取 rawfile 中的字典文件内容 (返回的是 Uint8Array 字节流)
       const rawData = await resMgr.getRawFileContent('ml/vocab.txt');
 
-      // 2. 利用系统工具将字节流解码为 UTF-8 字符串
+      // 利用系统工具将字节流解码为 UTF-8 字符串
       const textDecoder = util.TextDecoder.create('utf-8');
       const vocabText = textDecoder.decodeWithStream(rawData);
 
-      // 3. 按行分割并构建内存 Map 字典
+      // 按行分割并构建内存 Map 字典
       const lines = vocabText.split('\n');
       for (let i = 0; i < lines.length; i++) {
         const token = lines[i].trim();

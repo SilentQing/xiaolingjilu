@@ -18,21 +18,21 @@ export class InformationExtractionService {
     hilog.info(0x0000, 'Extraction', '--- 端云协同解析流水线启动 ---');
 
     // ==========================================
-    // 阶段 1：本地端侧预处理与意图识别 (Edge AI)
+    // 本地端侧预处理与意图识别 (Edge AI)
     // ==========================================
     const startTime = Date.now();
 
-    // 1. 文本数字化 (查字典)
+    // 文本数字化 (查字典)
     const tokenIds = TokenizerService.tokenize(rawText);
 
-    // 2. NPU 毫秒级推理判断
+    // NPU 毫秒级推理判断
     const isBill = await MindSporeService.predictIsBill(tokenIds);
 
     const edgeTime = Date.now() - startTime;
     hilog.info(0x0000, 'Extraction', `端侧意图识别完毕，耗时: ${edgeTime}ms，判定结果: ${isBill ? '【账单】' : '【非账单】'}`);
 
     // ==========================================
-    // 阶段 2：动态路由分流 (Dynamic Routing)
+    // 动态路由分流 (Dynamic Routing)
     // ==========================================
     if (isBill) {
       // ----------------------------------------

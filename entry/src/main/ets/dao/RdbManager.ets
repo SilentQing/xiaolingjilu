@@ -28,7 +28,7 @@ export class RdbManager {
     )
   `;
 
-  // 单例模式，确保全局只有一个数据库连接
+  // 单例模式
   public static getInstance(): RdbManager {
     if (!RdbManager.instance) {
       RdbManager.instance = new RdbManager();
@@ -87,7 +87,7 @@ export class RdbManager {
       'embedding' : item.embedding ? JSON.stringify(item.embedding) : '[]'
     };
 
-    // 执行插入操作，'record_item' 是我们之前建的表名
+    // 执行插入操作
     const rowId = await store.insert('record_item', valueBucket);
     return rowId;
   }
@@ -146,7 +146,6 @@ export class RdbManager {
       });
     }
 
-    // 用完结果集关闭，否则会导致内存泄漏
     resultSet.close();
 
     return results;

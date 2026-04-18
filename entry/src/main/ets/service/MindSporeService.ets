@@ -19,12 +19,12 @@ export class MindSporeService {
     try {
       hilog.info(0x0000, 'MindSpore', '正在唤醒底层 AI 引擎，加载 bill_classifier.ms ...');
 
-      // 1. 从 rawfile 读取 .ms 模型的二进制流
+      // 从 rawfile 读取 .ms 模型的二进制流
       const modelFile = await resMgr.getRawFileContent('ml/bill_classifier.ms');
       hilog.info(0x0000, 'MindSpore', `模型文件读取成功，大小: ${modelFile.byteLength} 字节`);
 
 
-      // 2. 配置硬件上下文 (Context)
+      // 配置硬件上下文 (Context)
       let context: mindSporeLite.Context = {
         target: ['cpu'],
         cpu: {
@@ -35,7 +35,7 @@ export class MindSporeService {
       hilog.info(0x0000, 'MindSpore', '硬件上下文配置完成，target: cpu, threadNum: 2');
 
 
-      // 3. 将模型加载到底层引擎中
+      // 将模型加载到底层引擎中
       hilog.info(0x0000, 'MindSpore', '开始调用 loadModelFromBuffer 加载模型...');
       MindSporeService.model = await mindSporeLite.loadModelFromBuffer(modelFile.buffer, context);
       // 加载成功后，检查模型是否有效
@@ -80,15 +80,15 @@ export class MindSporeService {
       }
       hilog.info(0x0000, 'MindSpore', `处理后 tokenIds 长度: ${paddedTokenIds.length}`);
       // ==========================================
-      // 步骤 A：构造 BERT 架构极其严格的三大输入矩阵
+      // 步骤 A：构造 BERT 架构的三大输入矩阵
       // ==========================================
 
 
-      // 1. attention_mask: 告诉模型哪些是有效字(1)，哪些是补齐的空位 0 (PAD)
+      // attention_mask: 告诉模型哪些是有效字(1)，哪些是补齐的空位 0 (PAD)
       const attentionMask = tokenIds.map(id => id === 0 ? 0 : 1);
       hilog.debug(0x0000, 'MindSpore', `attentionMask 长度: ${attentionMask.length}, 前10个值: ${attentionMask.slice(0, 10).join(', ')}`);
 
-      // 2. token_type_ids: 区分句子 A 和 B。由于我们只有一句话，全填 0 即可
+      // token_type_ids: 区分句子 A 和 B。只有一句话，全填 0
       const tokenTypeIds: Array<number> = new Array(128).fill(0);
       hilog.debug(0x0000, 'MindSpore', `tokenTypeIds 长度: ${tokenTypeIds.length}`);
 
@@ -102,8 +102,7 @@ export class MindSporeService {
         hilog.info(0x0000, 'MindSpore', `输入端口[${idx}] 名称: ${tensor.name}, 数据类型: ${tensor.dtype}, 形状: ${JSON.stringify(tensor.shape)}`);
       });
 
-      // 遍历端口，根据名称精准装填数据 (防止转换工具打乱了输入顺序)
-      // 注意：端侧推理框架通常使用 Int32Array 处理整数张量
+      // 遍历端口，根据名称装填数据 (防止转换工具打乱了输入顺序)
       for (let i = 0; i < inputs.length; i++) {
         const tensor = inputs[i];
         if (tensor.name === 'input_ids') {
@@ -117,7 +116,7 @@ export class MindSporeService {
       }
 
       // ==========================================
-      // 步骤 B：点火！执行前向传播 (Forward Propagation)
+      // 步骤 B：执行前向传播 (Forward Propagation)
       // ==========================================
       const startTime = Date.now();
       let outputs = await MindSporeService.model.predict(inputs);
@@ -126,7 +125,7 @@ export class MindSporeService {
       // ==========================================
       // 步骤 C：解析高维张量输出
       // ==========================================
-      // LERT/BERT 输出的是一个名为 logits 的浮点数组 [score_class_0, score_class_1]
+      // LERT 输出的是一个名为 logits 的浮点数组 [score_class_0, score_class_1]
       let outData = new Float32Array(outputs[0].getData());
 
       // 这里的索引对应我们在 Python 里造数据时的 Label

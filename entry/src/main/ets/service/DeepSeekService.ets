@@ -85,12 +85,11 @@ export class DeepSeekService {
 
     // 构造发给大模型的请求体
     const requestBody: ChatRequestBody = {
-      model: "deepseek-chat", // 使用标准的 chat 模型即可，性价比最高
+      model: "deepseek-chat",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `这是提取出的OCR文本，请解析：\n${rawText}` }
       ],
-      // 降低 temperature 可以让大模型的输出更具确定性，适合信息抽取任务
       temperature: 0.1
     };
 
@@ -118,13 +117,13 @@ export class DeepSeekService {
         const aiResult: AiParseResult = JSON.parse(contentString);
         hilog.info(0x0000, 'DeepSeekService', `大模型解析成功: ${contentString}`);
 
-        // 组装成我们的数据库对象
+        // 组装数据库对象
         return {
           id: util.generateRandomUUID(),
           imagePath: 'file://' + imagePath,
           title: aiResult.title || '未命名记录',
-          // summary: aiResult.summary || rawText.substring(0, 50),
-          summary: rawText,
+          summary: aiResult.summary || rawText.substring(0, 50),
+          // summary: rawText,
           category: aiResult.category as Category || Category.Knowledge,
           tags: aiResult.tags || [],
           highlightValue: aiResult.highlightValue || '',

@@ -38,10 +38,10 @@ export default class EntryAbility extends UIAbility {
 
       hilog.info(0x0000, 'EntryAbility', '=== 开始后台初始化端侧 AI 双核引擎 ===');
 
-      // 1. 初始化轻量级分词器 (加载 vocab.txt 字典)
+      // 初始化轻量级分词器 (加载 vocab.txt 字典)
       await TokenizerService.init(resMgr);
 
-      // 2. 初始化 MindSpore Lite NPU 推理引擎 (加载 .ms 模型)
+      // 初始化 MindSpore Lite NPU 推理引擎 (加载 .ms 模型)
       await MindSporeService.init(resMgr);
 
       hilog.info(0x0000, 'EntryAbility', '=== 端侧 AI 引擎全部就绪！火力全开 ===');
